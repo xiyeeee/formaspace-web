@@ -36,3 +36,5 @@ Token 使用内存 + sessionStorage，不保存密码、验证码或用户资料
 接口核对、修改文件、实际契约差异、截图与验证边界见 [账号对接说明](docs/auth-integration.md)。按用户要求未进行线上联调，临时浏览器拦截测试不代表真实邮件或账号流程已联调成功。
 
 生产环境需为 `/api` 配置真实反向代理；前端页面路由回退到 index.html，API 路径不能回退。跨域直连需精确 CORS，并由后端暴露 Retry-After。
+
+登录页已加入 GPU 虹彩流体拖尾；浅色独立预览见 `/effects/fluid-cursor`，实现和默认参数见 [流体效果说明](docs/fluid-cursor.md)。

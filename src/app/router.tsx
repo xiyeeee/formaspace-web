@@ -6,6 +6,7 @@ import { WorksPage } from '@/features/works/pages/works-page'
 import { ErrorPage } from '@/app/error-page'
 
 export const router = createBrowserRouter([
+  { path: '/effects/fluid-cursor', lazy: async () => ({ Component: (await import('@/features/effects/fluid-cursor-page')).FluidCursorPage }), errorElement: <ErrorPage /> },
   { path: '/login', lazy: async () => ({ Component: (await import('@/features/auth/pages/login-page')).LoginPage }), errorElement: <ErrorPage /> },
   { path: '/register', lazy: async () => ({ Component: (await import('@/features/auth/pages/register-page')).RegisterPage }), errorElement: <ErrorPage /> },
   {

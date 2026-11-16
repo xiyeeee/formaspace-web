@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { AdditiveBlending, Group, ShaderMaterial, Vector2 } from 'three'
 import { sampleRibbon } from '@/features/auth/lib/particle-geometry'
+import { FluidPass } from '@/components/effects/fluid-cursor/fluid-pass'
+import { loginPalette } from '@/components/effects/fluid-cursor/types'
 import { usePageVisible } from '@/features/auth/lib/use-media-query'
 
 const vertexShader = `
@@ -111,6 +113,7 @@ export const ParticleScene = ({ reducedMotion, onReady, onFailure }: SceneProps)
       gl={{ antialias: false, alpha: true, powerPreference: 'low-power' }}
       fallback={null} onCreated={onReady} style={{ pointerEvents: 'none' }}>
       <Ribbon reducedMotion={reducedMotion} onFailure={onFailure} />
+      <FluidPass enabled={!reducedMotion} palette={loginPalette} intensity={1.1} />
     </Canvas>
   )
 }
