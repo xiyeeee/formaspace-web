@@ -37,4 +37,4 @@ Token 使用内存 + sessionStorage，不保存密码、验证码或用户资料
 
 生产环境需为 `/api` 配置真实反向代理；前端页面路由回退到 index.html，API 路径不能回退。跨域直连需精确 CORS，并由后端暴露 Retry-After。
 
-登录页现为龙卷风 → 花朵盛开 → 河流 → 蝴蝶的连续点云变形，见 [形态变换说明](docs/particle-morph.md)。虹彩流体作为轻量辅助保留，浅色独立预览见 `/effects/fluid-cursor`。
+登录页现为龙卷风 → 荷花绽放 → 河流 → 蝴蝶群的连续点云变形，见 [形态变换说明](docs/particle-morph.md)。虹彩流体作为轻量辅助保留，浅色独立预览见 `/effects/fluid-cursor`。

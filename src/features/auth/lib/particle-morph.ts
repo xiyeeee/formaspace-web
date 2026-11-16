@@ -1,30 +1,41 @@
-export const morphTiming = { hold: 5.5, transition: 3, forms: 4 } as const
+import { initialParticleForm, particleForms } from './particle-forms'
+
+export const morphTiming = {
+  holds: particleForms.map((form) => form.holdSeconds),
+  transition: 3,
+  forms: particleForms.length,
+} as const
+
+let stageStart = 0
+let flowStart = 0
+const stages = morphTiming.holds.map((hold, index) => {
+  const stage = { index, hold, start: stageStart, end: stageStart + hold + morphTiming.transition, flowStart }
+  stageStart = stage.end
+  flowStart += hold
+  return stage
+})
+const cycleDuration = stageStart
+const cycleFlowDuration = flowStart
 
 export const getMorphFrame = (elapsed: number) => {
-  const duration = morphTiming.hold + morphTiming.transition
-  const segment = Math.floor(elapsed / duration)
-  const age = elapsed % duration
+  const cycle = Math.floor(elapsed / cycleDuration)
+  const cycleAge = elapsed % cycleDuration
+  const stage = stages.find((item) => cycleAge < item.end) ?? stages[0]
+  const age = cycleAge - stage.start
   return {
-    from: segment % morphTiming.forms,
-    to: (segment + 1) % morphTiming.forms,
-    progress: Math.max(0, (age - morphTiming.hold) / morphTiming.transition),
-    motionTime: segment * morphTiming.hold + Math.min(age, morphTiming.hold),
+    from: stage.index,
+    to: (stage.index + 1) % morphTiming.forms,
+    progress: Math.max(0, (age - stage.hold) / morphTiming.transition),
+    holdProgress: Math.min(age / stage.hold, 1),
+    motionTime: cycle * cycleFlowDuration + stage.flowStart + Math.min(age, stage.hold),
     fromAge: age + morphTiming.transition,
-    toAge: Math.max(0, age - morphTiming.hold),
+    toAge: Math.max(0, age - stage.hold),
   }
 }
 
-// 与 GPU 的 tornado(seed, 0) 保持一致，加载占位与动画使用同一批初始粒子。
-const getInitialTornadoPoint = (height: number, angleSeed: number, radiusSeed: number, partSeed: number) => {
-  const streamPosition = angleSeed * 5
-  const stream = Math.floor(streamPosition) / 5 * Math.PI * 2 + (streamPosition % 1) * 0.32
-  const angle = (partSeed < 0.82 ? stream : angleSeed * Math.PI * 2) + height * Math.PI * 5
-  const radius = (0.16 + height ** 1.65 * 1.95) * (0.78 + radiusSeed * 0.22)
-  return [
-    Math.cos(angle) * radius + Math.sin(height * 4) * height * 0.16,
-    height * 4.6 - 2.3,
-    Math.sin(angle) * radius * 0.75,
-  ]
+export const getParticleViewport = (width: number, height: number) => {
+  const viewportHeight = 20 * Math.tan(24 * Math.PI / 180)
+  return { width: viewportHeight * width / height, height: viewportHeight }
 }
 
 export const getParticleLayout = (viewportWidth: number, viewportHeight: number) => ({
@@ -48,7 +59,7 @@ export const createMorphParticles = (count = 10_500) => {
     const sideSeed = random()
     const partSeed = random()
     seeds.set([radiusSeed, angleSeed, sideSeed, partSeed], index * 4)
-    positions.set(getInitialTornadoPoint(radiusSeed, angleSeed, sideSeed, partSeed), index * 3)
+    positions.set(initialParticleForm.sampleInitialPosition([radiusSeed, angleSeed, sideSeed, partSeed]), index * 3)
     sizes[index] = 0.65 + random() * 0.6
   })
   return { positions, seeds, sizes }
@@ -56,9 +67,9 @@ export const createMorphParticles = (count = 10_500) => {
 
 export const projectInitialTornado = (particles: ReturnType<typeof createMorphParticles>, width: number, height: number) => {
   const paths = ['', '', '']
-  const viewportHeight = 20 * Math.tan(24 * Math.PI / 180)
-  const viewportWidth = viewportHeight * width / height
-  const layout = getParticleLayout(viewportWidth, viewportHeight)
+  const viewport = getParticleViewport(width, height)
+  const viewportHeight = viewport.height
+  const layout = getParticleLayout(viewport.width, viewport.height)
   Array.from({ length: particles.positions.length / 3 }).forEach((_, index) => {
     const offset = index * 3
     const worldX = particles.positions[offset] * layout.scale + layout.horizontal

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { AdditiveBlending, ShaderMaterial, Vector2 } from 'three'
-import { createMorphParticles, getMorphFrame, getParticleLayout } from '@/features/auth/lib/particle-morph'
+import { AdditiveBlending, PerspectiveCamera, ShaderMaterial, Vector2 } from 'three'
+import { createMorphParticles, getMorphFrame, getParticleLayout, getParticleViewport } from '@/features/auth/lib/particle-morph'
+import { createParticleCameraTrack } from '@/features/auth/lib/particle-camera'
 import { morphFragmentShader, morphVertexShader } from '@/features/auth/lib/shaders/particle-morph'
 import { FluidPass } from '@/components/effects/fluid-cursor/fluid-pass'
 import { loginPalette } from '@/components/effects/fluid-cursor/types'
@@ -12,7 +13,10 @@ type SceneProps = { reducedMotion: boolean; onReady: () => void; onFailure: () =
 const MorphingParticles = ({ reducedMotion, onFailure }: Pick<SceneProps, 'reducedMotion' | 'onFailure'>) => {
   const material = useRef<ShaderMaterial>(null)
   const pointer = useRef(new Vector2(5, 5))
-  const { gl, viewport } = useThree()
+  const { gl, size } = useThree()
+  const viewport = getParticleViewport(size.width, size.height)
+  const layout = getParticleLayout(viewport.width, viewport.height)
+  const cameraTrack = useMemo(() => createParticleCameraTrack(), [])
   const data = useMemo(() => createMorphParticles(), [])
   const uniforms = useMemo(() => ({
     uTime: { value: 0 }, uFlowTime: { value: 0 }, uMotion: { value: 1 }, uDpr: { value: 1 },
@@ -53,9 +57,10 @@ const MorphingParticles = ({ reducedMotion, onFailure }: Pick<SceneProps, 'reduc
     shader.uMorph.value = frame.progress
     shader.uAges.value.set(frame.fromAge, frame.toAge)
     shader.uPointer.value.lerp(pointer.current, 1 - Math.exp(-delta * 4))
+    if (state.camera instanceof PerspectiveCamera && size.width > 0 && size.height > 0) {
+      cameraTrack.update(state.camera, frame, layout, viewport.height, size.width, size.height)
+    }
   })
-
-  const layout = getParticleLayout(viewport.width, viewport.height)
   return (
     <group position={[layout.horizontal, layout.vertical, 0]} scale={layout.scale}>
       <points frustumCulled={false}>
