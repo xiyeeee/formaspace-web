@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { AdditiveBlending, PerspectiveCamera, ShaderMaterial, Vector2 } from 'three'
-import { createMorphParticles, getMorphFrame, getParticleLayout, getParticleViewport } from '@/features/auth/lib/particle-morph'
+import { AdditiveBlending, PerspectiveCamera, ShaderMaterial, Vector2, Vector4 } from 'three'
+import { createMorphParticles, getFormPresentation, getMorphFrame, getParticleLayout, getParticleViewport } from '@/features/auth/lib/particle-morph'
 import { createParticleCameraTrack } from '@/features/auth/lib/particle-camera'
 import { morphFragmentShader, morphVertexShader } from '@/features/auth/lib/shaders/particle-morph'
 import { FluidPass } from '@/components/effects/fluid-cursor/fluid-pass'
@@ -21,6 +21,7 @@ const MorphingParticles = ({ reducedMotion, onFailure }: Pick<SceneProps, 'reduc
   const uniforms = useMemo(() => ({
     uTime: { value: 0 }, uFormTimes: { value: new Vector2(0, 0) }, uMotion: { value: 1 }, uDpr: { value: 1 },
     uPointer: { value: new Vector2(5, 5) }, uFrom: { value: 0 }, uTo: { value: 1 },
+    uFromFraming: { value: new Vector4(0, 0, 1, 1) }, uToFraming: { value: new Vector4(0, 0, 1, 1) },
     uMorph: { value: 0 }, uAges: { value: new Vector2(3, 0) },
   }), [])
 
@@ -51,6 +52,10 @@ const MorphingParticles = ({ reducedMotion, onFailure }: Pick<SceneProps, 'reduc
     shader.uDpr.value = state.gl.getPixelRatio()
     if (!reducedMotion) shader.uTime.value += Math.min(delta, 0.05)
     const frame = getMorphFrame(shader.uTime.value)
+    const fromPresentation = getFormPresentation(frame.from)
+    const toPresentation = getFormPresentation(frame.to)
+    shader.uFromFraming.value.set(...fromPresentation.offset, fromPresentation.scale, fromPresentation.brightness)
+    shader.uToFraming.value.set(...toPresentation.offset, toPresentation.scale, toPresentation.brightness)
     shader.uFormTimes.value.set(frame.fromMotionTime, frame.toMotionTime)
     shader.uFrom.value = frame.from
     shader.uTo.value = frame.to

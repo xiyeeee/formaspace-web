@@ -4,6 +4,8 @@ export const morphVertexShader = `
   attribute vec4 aSeed;
   attribute float aSize;
   uniform vec2 uFormTimes;
+  uniform vec4 uFromFraming;
+  uniform vec4 uToFraming;
   uniform float uFrom;
   uniform float uTo;
   uniform float uMorph;
@@ -17,6 +19,10 @@ export const morphVertexShader = `
   void main() {
     ParticleForm from = getForm(uFrom, aSeed, uFormTimes.x, uAges.x);
     ParticleForm to = getForm(uTo, aSeed, uFormTimes.y, uAges.y);
+    from.point = from.point * uFromFraming.z + vec3(uFromFraming.xy, 0.0);
+    to.point = to.point * uToFraming.z + vec3(uToFraming.xy, 0.0);
+    from.visibility *= uFromFraming.w;
+    to.visibility *= uToFraming.w;
     float progress = smoothstep(aSeed.w * 0.12, 0.88 + aSeed.w * 0.12, uMorph);
     vec3 arc = vec3(sin(aSeed.w * TAU), cos(aSeed.w * TAU), sin(aSeed.y * TAU));
     vec3 point = mix(from.point, to.point, progress) + arc * sin(progress * PI) * 0.36;
@@ -29,9 +35,8 @@ export const morphVertexShader = `
     gl_Position = projectionMatrix * viewPosition;
     vec2 screen = gl_Position.xy / gl_Position.w * 0.5 + 0.5;
     float panelFade = mix(1.0, 0.32, smoothstep(0.65, 0.86, screen.x));
-    float titleFade = mix(1.0, 0.4, (1.0 - smoothstep(0.22, 0.48, screen.x)) * (1.0 - smoothstep(0.13, 0.4, screen.y)));
     float depth = clamp((viewPosition.z + 14.0) / 6.0, 0.3, 1.0);
-    vOpacity = mix(from.visibility, to.visibility, progress) * depth * (0.45 + aSeed.z * 0.55) * panelFade * titleFade;
+    vOpacity = mix(from.visibility, to.visibility, progress) * depth * (0.45 + aSeed.z * 0.55) * panelFade;
     vColor = mix(from.color, to.color, progress);
     gl_PointSize = clamp(23.0 * aSize * uDpr / -viewPosition.z, 1.0, 3.8);
   }

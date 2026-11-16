@@ -15,6 +15,7 @@ export type ParticleFormDefinition = {
   entryPoint: string
   shader: string
   camera: CameraShot
+  presentation?: { scale: number; offset: readonly [number, number]; brightness: number }
 }
 
 export type InitialParticleFormDefinition = ParticleFormDefinition & {

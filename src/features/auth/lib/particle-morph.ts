@@ -1,4 +1,9 @@
 import { initialParticleForm, particleForms } from './particle-forms'
+import type { ParticleFormDefinition } from './particle-forms/types'
+
+const defaultPresentation = { scale: 1, offset: [0, 0], brightness: 1 } as const
+export const getFormPresentation = (index: number) =>
+  (particleForms[index] as ParticleFormDefinition).presentation ?? defaultPresentation
 
 export const morphTiming = {
   holds: particleForms.map((form) => form.holdSeconds),
@@ -37,8 +42,8 @@ export const getParticleViewport = (width: number, height: number) => {
 }
 
 export const getParticleLayout = (viewportWidth: number, viewportHeight: number) => ({
-  horizontal: -viewportWidth * 0.08,
-  vertical: 0.15,
+  horizontal: -viewportWidth * 0.12,
+  vertical: 0.45,
   scale: Math.min(viewportWidth / 9.8, viewportHeight / 6.5),
 })
 
@@ -68,11 +73,12 @@ export const projectInitialTornado = (particles: ReturnType<typeof createMorphPa
   const viewport = getParticleViewport(width, height)
   const viewportHeight = viewport.height
   const layout = getParticleLayout(viewport.width, viewport.height)
+  const presentation = getFormPresentation(0)
   Array.from({ length: particles.positions.length / 3 }).forEach((_, index) => {
     const offset = index * 3
-    const worldX = particles.positions[offset] * layout.scale + layout.horizontal
-    const worldY = particles.positions[offset + 1] * layout.scale + layout.vertical
-    const worldZ = particles.positions[offset + 2] * layout.scale
+    const worldX = (particles.positions[offset] * presentation.scale + presentation.offset[0]) * layout.scale + layout.horizontal
+    const worldY = (particles.positions[offset + 1] * presentation.scale + presentation.offset[1]) * layout.scale + layout.vertical
+    const worldZ = particles.positions[offset + 2] * presentation.scale * layout.scale
     const perspective = 10 / (10 - worldZ)
     const horizontal = (width / 2 + worldX * perspective * height / viewportHeight).toFixed(1)
     const vertical = (height / 2 - worldY * perspective * height / viewportHeight).toFixed(1)

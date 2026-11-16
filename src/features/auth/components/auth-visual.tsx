@@ -48,8 +48,6 @@ export const AuthVisual = () => {
         <ParticleScene reducedMotion={reducedMotion} onReady={onReady} onFailure={onFailure} />
       </Suspense></SceneBoundary>}
       <div className="auth-visual-shade" />
-      <div className="auth-visual-annotation"><span className="auth-cross">+</span><span>MORPHING FORMS<span className="auth-annotation-line" /><small>FORM / LIGHT / POSSIBILITY</small></span></div>
-      <span className="auth-material-label">IMAGINATION, IN DIMENSION</span>
     </div>
   )
 }

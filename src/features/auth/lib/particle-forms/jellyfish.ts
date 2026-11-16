@@ -68,6 +68,7 @@ export const jellyfishForm = {
   holdSeconds: 8.5,
   entryPoint: 'jellyfish',
   shader: jellyfishShader,
+  presentation: { scale: 1.16, offset: [-0.1, -0.05], brightness: 1.4 },
   camera: {
     start: { position: [1.8, 1.5, 11.5], target: [0, 0.35, 0], fov: 50.5 },
     end: { position: [-0.6, 1.3, 11.7], target: [0, 0.35, 0], fov: 50.5 },

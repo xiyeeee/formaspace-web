@@ -77,6 +77,7 @@ export const whaleForm = {
   holdSeconds: 7.5,
   entryPoint: 'whale',
   shader: whaleShader,
+  presentation: { scale: 1.16, offset: [0.6, 0.2], brightness: 1.45 },
   camera: {
     start: { position: [1.8, 4, 11.3], target: [0, 0.15, 0], fov: 49.5 },
     end: { position: [0.6, 3.6, 11.6], target: [0, 0.15, 0], fov: 49.5 },

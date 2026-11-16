@@ -33,6 +33,7 @@ export const tornadoForm = {
   holdSeconds: 5.5,
   entryPoint: 'tornado',
   shader: tornadoShader,
+  presentation: { scale: 0.9, offset: [0, -0.15], brightness: 1.12 },
   camera: {
     start: { position: [0, 0, 10], target: [0, 0, 0], fov: 48 },
     end: { position: [-2.2, -0.65, 10.1], target: [0, 0.1, 0], fov: 48 },

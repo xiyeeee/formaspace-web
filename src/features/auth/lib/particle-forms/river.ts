@@ -118,6 +118,7 @@ export const riverForm = {
   holdSeconds: 5.5,
   entryPoint: 'river',
   shader: riverShader,
+  presentation: { scale: 1.08, offset: [0, 0.15], brightness: 1.22 },
   camera: {
     start: { position: [5.5, 4.5, 8.2], target: [0, 0.1, 0], fov: 44.5 },
     end: { position: [4.7, 4.1, 8.7], target: [0.2, 0.1, 0], fov: 44.5 },
