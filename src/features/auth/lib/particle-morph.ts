@@ -7,18 +7,14 @@ export const morphTiming = {
 } as const
 
 let stageStart = 0
-let flowStart = 0
 const stages = morphTiming.holds.map((hold, index) => {
-  const stage = { index, hold, start: stageStart, end: stageStart + hold + morphTiming.transition, flowStart }
+  const stage = { index, hold, start: stageStart, end: stageStart + hold + morphTiming.transition }
   stageStart = stage.end
-  flowStart += hold
   return stage
 })
 const cycleDuration = stageStart
-const cycleFlowDuration = flowStart
 
 export const getMorphFrame = (elapsed: number) => {
-  const cycle = Math.floor(elapsed / cycleDuration)
   const cycleAge = elapsed % cycleDuration
   const stage = stages.find((item) => cycleAge < item.end) ?? stages[0]
   const age = cycleAge - stage.start
@@ -27,7 +23,9 @@ export const getMorphFrame = (elapsed: number) => {
     to: (stage.index + 1) % morphTiming.forms,
     progress: Math.max(0, (age - stage.hold) / morphTiming.transition),
     holdProgress: Math.min(age / stage.hold, 1),
-    motionTime: cycle * cycleFlowDuration + stage.flowStart + Math.min(age, stage.hold),
+    // 入场目标固定在零时刻，成为当前形态后从同一帧开始独立播放。
+    fromMotionTime: Math.min(age, stage.hold),
+    toMotionTime: 0,
     fromAge: age + morphTiming.transition,
     toAge: Math.max(0, age - stage.hold),
   }

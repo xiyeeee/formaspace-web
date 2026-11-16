@@ -1,7 +1,7 @@
 import { tornadoForm } from './tornado'
 import { jellyfishForm } from './jellyfish'
 import { riverForm } from './river'
-import { astronautForm } from './astronaut'
+import { whaleForm } from './whale'
 import type { ParticleFormDefinition } from './types'
 
 export const initialParticleForm = tornadoForm
@@ -11,7 +11,7 @@ export const particleForms = [
   initialParticleForm,
   jellyfishForm,
   riverForm,
-  astronautForm,
+  whaleForm,
 ] as const satisfies readonly ParticleFormDefinition[]
 
 export type ParticleFormId = typeof particleForms[number]['id']

@@ -3,7 +3,7 @@ import { particleFormsShader } from './particle-forms'
 export const morphVertexShader = `
   attribute vec4 aSeed;
   attribute float aSize;
-  uniform float uFlowTime;
+  uniform vec2 uFormTimes;
   uniform float uFrom;
   uniform float uTo;
   uniform float uMorph;
@@ -15,8 +15,8 @@ export const morphVertexShader = `
   varying float vOpacity;
   ${particleFormsShader}
   void main() {
-    ParticleForm from = getForm(uFrom, aSeed, uFlowTime, uAges.x);
-    ParticleForm to = getForm(uTo, aSeed, uFlowTime, uAges.y);
+    ParticleForm from = getForm(uFrom, aSeed, uFormTimes.x, uAges.x);
+    ParticleForm to = getForm(uTo, aSeed, uFormTimes.y, uAges.y);
     float progress = smoothstep(aSeed.w * 0.12, 0.88 + aSeed.w * 0.12, uMorph);
     vec3 arc = vec3(sin(aSeed.w * TAU), cos(aSeed.w * TAU), sin(aSeed.y * TAU));
     vec3 point = mix(from.point, to.point, progress) + arc * sin(progress * PI) * 0.36;

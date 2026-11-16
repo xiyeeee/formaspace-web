@@ -19,7 +19,7 @@ const MorphingParticles = ({ reducedMotion, onFailure }: Pick<SceneProps, 'reduc
   const cameraTrack = useMemo(() => createParticleCameraTrack(), [])
   const data = useMemo(() => createMorphParticles(), [])
   const uniforms = useMemo(() => ({
-    uTime: { value: 0 }, uFlowTime: { value: 0 }, uMotion: { value: 1 }, uDpr: { value: 1 },
+    uTime: { value: 0 }, uFormTimes: { value: new Vector2(0, 0) }, uMotion: { value: 1 }, uDpr: { value: 1 },
     uPointer: { value: new Vector2(5, 5) }, uFrom: { value: 0 }, uTo: { value: 1 },
     uMorph: { value: 0 }, uAges: { value: new Vector2(3, 0) },
   }), [])
@@ -51,7 +51,7 @@ const MorphingParticles = ({ reducedMotion, onFailure }: Pick<SceneProps, 'reduc
     shader.uDpr.value = state.gl.getPixelRatio()
     if (!reducedMotion) shader.uTime.value += Math.min(delta, 0.05)
     const frame = getMorphFrame(shader.uTime.value)
-    shader.uFlowTime.value = frame.motionTime
+    shader.uFormTimes.value.set(frame.fromMotionTime, frame.toMotionTime)
     shader.uFrom.value = frame.from
     shader.uTo.value = frame.to
     shader.uMorph.value = frame.progress
