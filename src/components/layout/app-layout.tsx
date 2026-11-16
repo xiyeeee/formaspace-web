@@ -1,50 +1,35 @@
-import { Box, Grid2X2, Layers3 } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router'
-import { useNavigate } from 'react-router'
+import { Box, Grid2X2, LogOut, Sparkles } from 'lucide-react'
+import { NavLink, Outlet, useNavigate } from 'react-router'
 import { useSession } from '@/features/auth/lib/session-state'
 import { logout } from '@/features/auth/lib/session-actions'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { env } from '@/lib/env'
-
-const navigation = [
-  { to: '/studio', label: '生成工作台', icon: Box },
-  { to: '/works', label: '我的作品', icon: Grid2X2 },
-]
+import '@/features/generation/workbench.css'
 
 export const AppLayout = () => {
   const session = useSession()
   const navigate = useNavigate()
-  const signOut = () => {
-    logout()
-    navigate('/login', { replace: true })
-  }
+  const signOut = () => { logout(); navigate('/login', { replace: true }) }
   return (
-  <div className="min-h-svh bg-background text-foreground">
-    <a className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-background focus:p-3" href="#main-content">跳至主要内容</a>
-    <header className="border-b border-border">
-      <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
-        <NavLink to="/studio" className="flex items-center gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-ring">
-          <Layers3 className="size-7" aria-hidden="true" />
-          <span className="text-lg font-semibold tracking-tight">{env.appName}<span className="ml-2 text-sm font-normal text-muted-foreground">形境</span></span>
+    <div className="workspace-shell">
+      <a className="workspace-skip" href="#main-content">跳至主要内容</a>
+      <header className="workspace-header">
+        <NavLink to="/studio" className="workspace-brand" aria-label="形境 FormaSpace 工作台">
+          <svg viewBox="0 0 56 48" width="34" height="30" fill="none" aria-hidden="true"><path d="M2 30 24 4h17L19 30H2Zm19 14 22-26h11L32 44H21Z" fill="currentColor"/><path d="m21 32 15-18v17L21 44V32Z" fill="currentColor" opacity=".6"/></svg>
+          <strong>形境 <span>/ FormaSpace</span></strong>
         </NavLink>
-        <Badge variant="outline">创作空间</Badge>
-        <nav aria-label="主导航" className="flex w-full flex-wrap gap-1 sm:w-auto">
-          {navigation.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} className={({ isActive }) => `inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring ${isActive ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
-              {Icon && <Icon className="size-4" aria-hidden="true" />}{label}
-            </NavLink>
-          ))}
-          <span className="max-w-40 truncate px-3 py-2 text-sm text-muted-foreground">{session.user?.nickname}</span>
-          <Button variant="ghost" size="sm" onClick={signOut}>退出登录</Button>
+        <nav aria-label="主导航" className="workspace-navigation">
+          <NavLink to="/studio">工作台</NavLink><NavLink to="/works">我的作品</NavLink>
         </nav>
+        <div className="workspace-account"><span className="workspace-avatar" aria-hidden="true">{session.user?.nickname.slice(0, 1).toUpperCase()}</span><span className="workspace-username">{session.user?.nickname}</span><Button variant="ghost" size="icon" aria-label="退出登录" title="退出登录" onClick={signOut}><LogOut /></Button></div>
+      </header>
+      <div className="workspace-body">
+        <nav className="workspace-rail" aria-label="功能导航">
+          <NavLink to="/studio"><Sparkles size={22}/><span>创作</span></NavLink>
+          <NavLink to="/works"><Grid2X2 size={22}/><span>作品</span></NavLink>
+          <div className="workspace-rail-mark" aria-hidden="true"><Box size={19}/><small>3D</small></div>
+        </nav>
+        <main id="main-content" className="workspace-main"><Outlet /></main>
       </div>
-    </header>
-    <main id="main-content" className="mx-auto w-full max-w-[1600px] p-5 lg:p-8"><Outlet /></main>
-    <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 text-xs text-muted-foreground lg:px-8">
-      <p>形境 · 让想象拥有形状</p>
-      <span>上传与生成服务筹备中</span>
-    </footer>
-  </div>
-)
+    </div>
+  )
 }

@@ -20,7 +20,10 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: BodyInit | null
   json?: unknown
   timeoutMs?: number
+  responseType?: 'json' | 'binary'
 }
+
+export type BinaryResponse = { blob: Blob; headers: Headers }
 
 type HttpClientOptions = {
   baseUrl?: string
@@ -45,7 +48,7 @@ export const createHttpClient = ({
   getAccessToken,
 }: HttpClientOptions = {}) => {
   const request = async <T = unknown>(path: string, options: RequestOptions = {}): Promise<T> => {
-    const { json, body, timeoutMs = 15_000, signal, headers: suppliedHeaders, ...init } = options
+    const { json, body, timeoutMs = 15_000, responseType = 'json', signal, headers: suppliedHeaders, ...init } = options
     if (json !== undefined && body != null) {
       throw new ApiError('json 和 body 不能同时传入', 0, 'INVALID_OPTIONS')
     }
@@ -75,7 +78,9 @@ export const createHttpClient = ({
         body: json !== undefined ? JSON.stringify(json) : body,
         signal: controller.signal,
       })
-      const payload = await readResponse(response)
+      const payload = response.ok && responseType === 'binary'
+        ? { blob: await response.blob(), headers: response.headers }
+        : await readResponse(response)
       if (!response.ok) {
         throw new ApiError(`请求失败（${response.status}）`, response.status, undefined, payload, response.headers)
       }

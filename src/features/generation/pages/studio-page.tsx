@@ -1,17 +1,69 @@
-import { Box, History, Upload } from 'lucide-react'
-import { EmptyPanel } from '@/components/layout/empty-panel'
-import { Badge } from '@/components/ui/badge'
+import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router'
+import { useSession } from '@/features/auth/lib/session-state'
+import { UploadPanel } from '../components/upload-panel'
+import { ModelViewport } from '../components/model-viewport'
+import { TaskHistory } from '../components/task-history'
+import { AssetDetails } from '../components/asset-details'
+import { useImageUpload } from '../hooks/use-image-upload'
+import { useTaskHistory, useTaskQuery } from '../hooks/use-task-query'
+import { useTaskSubmission } from '../hooks/use-task-submission'
+import { getAsset, getCapabilities } from '../lib/generation-api'
+import { adaptCapabilities, buildTaskRequest, initialDraft } from '../lib/generation-settings'
+import { generationErrorMessage, isTaskRunning } from '../lib/generation-errors'
+import { queryClient } from '@/lib/query-client'
+import type { GenerationDraft, GenerationTask, TaskStatus } from '../types'
 
-export const StudioPage = () => (
-  <section aria-labelledby="studio-title" className="space-y-7">
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div className="space-y-2"><p className="text-xs tracking-[0.2em] text-muted-foreground">FORMASPACE / STUDIO</p><h1 id="studio-title" className="text-3xl font-semibold tracking-tight">生成工作台</h1><p className="text-sm text-muted-foreground">从一张图片开始，探索三维创作的可能。</p></div>
-      <Badge variant="secondary">功能筹备中</Badge>
-    </div>
-    <div className="grid gap-4 lg:min-h-[58svh] lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]">
-      <EmptyPanel title="01 / 上传与参数" icon={Upload} description="图片上传、模型参数与生成操作将在下一阶段开放。" />
-      <EmptyPanel title="02 / 模型预览" icon={Box} description="三维模型将在这里呈现。当前为预览区域占位。" className="bg-muted/20" />
-      <EmptyPanel title="03 / 任务历史" icon={History} description="暂无任务。接入生成服务后，这里将展示任务状态与历史记录。" />
-    </div>
-  </section>
-)
+export const StudioPage = () => {
+  const session = useSession()
+  return <StudioWorkspace key={session.user!.id} userId={session.user!.id}/>
+}
+const StudioWorkspace = ({ userId }: { userId: string }) => {
+  const [params, setParams] = useSearchParams()
+  const taskId = params.get('taskId')
+  const [draft, setDraft] = useState<GenerationDraft>(initialDraft)
+  const [draftError, setDraftError] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const [status, setStatus] = useState<TaskStatus>()
+  const [newDraft, setNewDraft] = useState(false)
+  const upload = useImageUpload()
+  const capabilities = useQuery({ queryKey: ['generation', userId, 'capabilities'], queryFn: ({ signal }) => getCapabilities(signal), select: adaptCapabilities, retry: false })
+  const history = useTaskHistory(page, status)
+  const taskQuery = useTaskQuery(taskId)
+  const task = taskQuery.data
+  const assetQuery = useQuery({
+    queryKey: ['generation', userId, 'asset', task?.assetId],
+    queryFn: ({ signal }) => getAsset(task!.assetId!, signal),
+    enabled: task?.status === 'SUCCEEDED' && Boolean(task.assetId), retry: false,
+  })
+  const selectTask = (selected: GenerationTask) => {
+    queryClient.setQueryData(['generation', userId, 'task', selected.id], selected)
+    setParams({ taskId: selected.id })
+  }
+  const submission = useTaskSubmission(selectTask)
+  useEffect(() => {
+    if (taskId || newDraft || page !== 1 || status || submission.pending) return
+    const active = history.data?.records.find((record) => isTaskRunning(record.status))
+    if (active) setParams({ taskId: active.id }, { replace: true })
+  }, [taskId, newDraft, page, status, history.data, submission.pending, setParams])
+  useEffect(() => {
+    if (task && !isTaskRunning(task.status)) void queryClient.invalidateQueries({ queryKey: ['generation', userId, 'tasks'] })
+  }, [task, userId])
+  const startNew = () => { setNewDraft(true); setParams({}); setDraftError(null) }
+  const generate = () => {
+    if (!capabilities.data?.canGenerate || !upload.selection?.uploaded || submission.pending) return
+    try {
+      const request = buildTaskRequest(capabilities.data, draft, upload.selection.uploaded.id)
+      setDraftError(null)
+      submission.submit(request)
+    } catch (cause) { setDraftError(generationErrorMessage(cause)) }
+  }
+  return <div className="studio-workbench">
+    <UploadPanel upload={upload} submission={submission} capabilities={capabilities.data} capabilityError={capabilities.error} capabilityLoading={capabilities.isPending}
+      onRetryCapabilities={() => void capabilities.refetch()} draft={draft} onDraftChange={(next) => { setDraft(next); setDraftError(null) }}
+      onSelectFile={(file) => { if (capabilities.data) { setNewDraft(true); void upload.select(file, capabilities.data) } }} onGenerate={generate} draftError={draftError} running={Boolean(task && isTaskRunning(task.status))}/>
+    <ModelViewport mode={capabilities.data?.mode} key={taskId || 'draft'} task={task} asset={assetQuery.data} taskError={taskQuery.error} loading={Boolean(taskId && taskQuery.isPending)} onRetryTask={() => void taskQuery.refetch()}/>
+    <aside className="history-panel"><div className="right-panel-tabs"><span className="active">创作记录</span><span>HISTORY & DETAILS</span></div><div className="right-panel-scroll"><TaskHistory history={history} selectedId={taskId} onSelect={selectTask} page={page} onPageChange={setPage} status={status} onStatusChange={(next) => { setStatus(next); setPage(1) }} onNew={startNew}/><AssetDetails key={taskId} task={task} asset={assetQuery.data} error={assetQuery.error} loading={assetQuery.isFetching} onRetry={() => { if (task?.assetId) void assetQuery.refetch(); else void taskQuery.refetch() }}/></div></aside>
+  </div>
+}

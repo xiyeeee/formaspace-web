@@ -1,12 +1,24 @@
-import { FolderOpen } from 'lucide-react'
+import { useState } from 'react'
+import { Box, ChevronLeft, ChevronRight, FolderOpen, LoaderCircle, Plus } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
-import { EmptyPanel } from '@/components/layout/empty-panel'
+import { useTaskHistory } from '@/features/generation/hooks/use-task-query'
+import { useProtectedImage } from '@/features/generation/hooks/use-protected-image'
+import { generationErrorMessage } from '@/features/generation/lib/generation-errors'
+import type { GenerationTask } from '@/features/generation/types'
 
-export const WorksPage = () => (
-  <section aria-labelledby="works-title" className="space-y-6">
-    <div className="space-y-2"><h1 id="works-title" className="text-3xl font-semibold tracking-tight">我的作品</h1><p className="text-sm text-muted-foreground">为你的创作留一席之地。</p></div>
-    <EmptyPanel title="作品库" icon={FolderOpen} description="作品列表尚未接入。未来生成的模型将在这里统一管理。" className="min-h-[50svh]" />
-    <Button asChild><Link to="/studio">前往生成工作台</Link></Button>
+const WorkCard = ({ task }: { task: GenerationTask }) => {
+  const image = useProtectedImage(task.sourceFileId)
+  return <Link className="work-link" to={`/studio?taskId=${encodeURIComponent(task.id)}`}><div className="work-image">{image ? <img src={image} alt="作品对应的源图片" loading="lazy"/> : <Box size={35}/>}<span>源图片{task.simulated ? ' · 演示结果' : ''}</span></div><h2>创作 {task.id.slice(-6)}</h2><p>{new Date(task.createdAt).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</p></Link>
+}
+export const WorksPage = () => {
+  const [page, setPage] = useState(1)
+  const history = useTaskHistory(page, 'SUCCEEDED')
+  return <section className="works-page" aria-labelledby="works-title"><div className="works-heading"><div><p className="eyebrow">YOUR CREATIVE SPACE</p><h1 id="works-title">我的作品</h1><p>已完成的创作记录，点击进入模型预览。<br/>卡片展示源图片，演示结果会单独标记。</p></div><Button asChild><Link to="/studio"><Plus size={16}/>开始创作</Link></Button></div>
+    {history.isPending && <div className="works-empty"><LoaderCircle className="animate-spin"/>正在读取创作记录…</div>}
+    {history.isError && <div className="works-empty" role="alert"><p>{generationErrorMessage(history.error)}</p><Button variant="outline" onClick={() => void history.refetch()}>重试</Button></div>}
+    {history.data?.records.length === 0 && <div className="works-empty"><FolderOpen size={36}/><p>还没有完成的作品，从一张图片开始吧。</p><Button asChild variant="outline"><Link to="/studio">前往工作台</Link></Button></div>}
+    <div className="works-grid">{history.data?.records.map((task) => <WorkCard key={task.id} task={task}/>)}</div>
+    {history.data && (page > 1 || history.data.total > history.data.size) && <div className="works-pagination"><Button variant="outline" disabled={page === 1 || history.isFetching} onClick={() => setPage(page - 1)}><ChevronLeft size={15}/>上一页</Button><span>{page} / {Math.max(1, Math.ceil(history.data.total / history.data.size))}</span><Button variant="outline" disabled={page * history.data.size >= history.data.total || history.isFetching} onClick={() => setPage(page + 1)}>下一页<ChevronRight size={15}/></Button></div>}
   </section>
-)
+}

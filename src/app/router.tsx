@@ -1,8 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router'
 import { AppLayout } from '@/components/layout/app-layout'
 import { RequireAuth } from '@/features/auth/components/require-auth'
-import { StudioPage } from '@/features/generation/pages/studio-page'
-import { WorksPage } from '@/features/works/pages/works-page'
 import { ErrorPage } from '@/app/error-page'
 
 export const router = createBrowserRouter([
@@ -16,8 +14,8 @@ export const router = createBrowserRouter([
       element: <AppLayout />,
       children: [
         { index: true, element: <Navigate to="/studio" replace /> },
-        { path: 'studio', element: <StudioPage /> },
-        { path: 'works', element: <WorksPage /> },
+        { path: 'studio', lazy: async () => ({ Component: (await import('@/features/generation/pages/studio-page')).StudioPage }) },
+        { path: 'works', lazy: async () => ({ Component: (await import('@/features/works/pages/works-page')).WorksPage }) },
       ],
     }],
   },

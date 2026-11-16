@@ -1,6 +1,6 @@
 # 形境 · FormaSpace
 
-React 19 + TypeScript 6 + Vite 8，使用 Tailwind CSS v4、shadcn/ui 与 React Router 7。当前已完成基础工程、沉浸式登录页和四个账号接口的前端对接；上传和生成工作台仍为占位。
+React 19 + TypeScript 6 + Vite 8，使用 Tailwind CSS v4、shadcn/ui 与 React Router 7。当前已完成基础工程、沉浸式登录页、账号接口，以及工作台上传、参数、任务轮询、GLB 预览与下载的前端对接。
 
 ## 运行
 
@@ -19,7 +19,7 @@ pnpm build
 
 - `/login`：点云环带背景、用户名或邮箱登录、密码显示、表单校验与错误反馈。
 - `/register`：邮箱验证码和五字段注册；注册后返回登录页。
-- `/studio`、`/works`：登录后访问，当前为布局占位。
+- `/studio`：登录后图片转模型工作台，支持 `?taskId=` 恢复任务；`/works`：按成功任务分页查看作品入口。
 - `/`：转工作台；未知地址显示 404。
 - 刷新通过 `/api/auth/me` 验证会话；失败可重试。退出只清理前端状态，不调用虚构接口。
 
@@ -38,3 +38,5 @@ Token 使用内存 + sessionStorage，不保存密码、验证码或用户资料
 生产环境需为 `/api` 配置真实反向代理；前端页面路由回退到 index.html，API 路径不能回退。跨域直连需精确 CORS，并由后端暴露 Retry-After。
 
 登录页现为龙卷风 → 水母群 → 河流与小船 → 大鲸鱼的连续点云变形，见 [形态变换说明](docs/particle-morph.md)。虹彩流体作为轻量辅助保留，浅色独立预览见 `/effects/fluid-cursor`。
+
+工作台实现、文件职责、实际后端契约和验证边界见 [工作台说明](docs/workbench.md)。默认连接现有 `/api`，DISABLED 禁用生成，MOCK 显著标记演示；后端尚未运行时可读取失败提示并重试。

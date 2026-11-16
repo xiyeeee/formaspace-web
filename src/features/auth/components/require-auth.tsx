@@ -6,6 +6,6 @@ export const RequireAuth = () => {
   const session = useSession()
   const location = useLocation()
   if (session.status === 'checking' || session.status === 'error') return <SessionStatus />
-  if (session.status === 'anonymous') return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />
+  if (session.status === 'anonymous') return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />
   return <Outlet />
 }

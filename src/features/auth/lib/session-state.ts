@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import type { User } from '@/features/auth/types'
 import { readToken, writeToken } from '@/features/auth/lib/token-storage'
 import { queryClient } from '@/lib/query-client'
+import { clearSessionDrafts } from '@/lib/session-drafts'
 
 type SessionState = {
   status: 'checking' | 'authenticated' | 'anonymous' | 'error'
@@ -45,6 +46,7 @@ export const acceptSession = (token: string, user: User) => {
 }
 
 export const clearSession = () => {
+  clearSessionDrafts()
   writeToken(null)
   void queryClient.cancelQueries()
   queryClient.clear()
