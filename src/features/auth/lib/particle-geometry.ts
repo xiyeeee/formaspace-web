@@ -32,8 +32,8 @@ export const projectRibbon = (positions: Float32Array) => {
     const rotatedX = x * Math.cos(-0.35) + z * Math.sin(-0.35)
     const screenX = rotatedX * Math.cos(-0.45) - y * Math.sin(-0.45)
     const screenY = rotatedX * Math.sin(-0.45) + y * Math.cos(-0.45)
-    const horizontal = (530 + screenX * 135).toFixed(1)
-    const vertical = (365 - screenY * 135).toFixed(1)
+    const horizontal = (720 + screenX * 168).toFixed(1)
+    const vertical = (450 - screenY * 168).toFixed(1)
     const group = index % 24 === 0 ? 2 : z > 0 ? 1 : 0
     paths[group] += `M${horizontal},${vertical}h1v1h-1z`
   })

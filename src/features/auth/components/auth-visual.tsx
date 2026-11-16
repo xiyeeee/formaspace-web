@@ -1,6 +1,6 @@
-import { Component, lazy, Suspense, useCallback, useMemo, useState } from 'react'
+import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { projectRibbon, sampleRibbon } from '@/features/auth/lib/particle-geometry'
+import { createMorphParticles, projectInitialTornado } from '@/features/auth/lib/particle-morph'
 import { useMediaQuery } from '@/features/auth/lib/use-media-query'
 
 const ParticleScene = lazy(() => import('@/features/auth/components/particle-scene').then((module) => ({ default: module.ParticleScene })))
@@ -12,11 +12,23 @@ class SceneBoundary extends Component<{ children: ReactNode; onFailure: () => vo
   render = () => this.state.failed ? null : this.props.children
 }
 
-const StaticRibbon = () => {
-  const paths = useMemo(() => projectRibbon(sampleRibbon(180, 30).positions), [])
+const StaticParticles = () => {
+  const svg = useRef<SVGSVGElement>(null)
+  const [size, setSize] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }))
+  const particles = useMemo(() => createMorphParticles(), [])
+  useEffect(() => {
+    if (!svg.current) return
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      if (width > 0 && height > 0) setSize((previous) => previous.width === width && previous.height === height ? previous : { width, height })
+    })
+    observer.observe(svg.current)
+    return () => observer.disconnect()
+  }, [])
+  const paths = useMemo(() => projectInitialTornado(particles, size.width, size.height), [particles, size.width, size.height])
   return (
-    <svg className="auth-static-ribbon" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
-      {paths.map((path, index) => <path key={index} d={path} fill={['#897e66', '#e6dcc6', '#cbf53a'][index]} opacity={[0.45, 0.8, 0.85][index]} />)}
+    <svg ref={svg} className="auth-static-particles" viewBox={`0 0 ${size.width} ${size.height}`} focusable="false">
+      {paths.map((path, index) => <path key={index} d={path} fill={['#b9b5a5', '#e0dbca', '#b9d66f'][index]} opacity={[0.22, 0.46, 0.42][index]} />)}
     </svg>
   )
 }
@@ -31,12 +43,12 @@ export const AuthVisual = () => {
 
   return (
     <div className="auth-visual" aria-hidden="true">
-      {(!ready || failed || mobile) && <StaticRibbon />}
+      {(!ready || failed || mobile) && <StaticParticles />}
       {!mobile && !failed && <SceneBoundary onFailure={onFailure}><Suspense fallback={null}>
         <ParticleScene reducedMotion={reducedMotion} onReady={onReady} onFailure={onFailure} />
       </Suspense></SceneBoundary>}
       <div className="auth-visual-shade" />
-      <div className="auth-visual-annotation"><span className="auth-cross">+</span><span>POINT CLOUD<span className="auth-annotation-line" /><small>FORM / LIGHT / POSSIBILITY</small></span></div>
+      <div className="auth-visual-annotation"><span className="auth-cross">+</span><span>MORPHING FORMS<span className="auth-annotation-line" /><small>FORM / LIGHT / POSSIBILITY</small></span></div>
       <span className="auth-material-label">IMAGINATION, IN DIMENSION</span>
     </div>
   )
