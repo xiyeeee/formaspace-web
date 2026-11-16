@@ -1,22 +1,24 @@
 import { createBrowserRouter, Navigate } from 'react-router'
 import { AppLayout } from '@/components/layout/app-layout'
-import { LoginPage } from '@/features/auth/pages/login-page'
-import { RegisterPage } from '@/features/auth/pages/register-page'
+import { RequireAuth } from '@/features/auth/components/require-auth'
 import { StudioPage } from '@/features/generation/pages/studio-page'
 import { WorksPage } from '@/features/works/pages/works-page'
 import { ErrorPage } from '@/app/error-page'
 
 export const router = createBrowserRouter([
+  { path: '/login', lazy: async () => ({ Component: (await import('@/features/auth/pages/login-page')).LoginPage }), errorElement: <ErrorPage /> },
+  { path: '/register', lazy: async () => ({ Component: (await import('@/features/auth/pages/register-page')).RegisterPage }), errorElement: <ErrorPage /> },
   {
-    element: <AppLayout />,
+    element: <RequireAuth />,
     errorElement: <ErrorPage />,
-    children: [
-      { index: true, element: <Navigate to="/studio" replace /> },
-      { path: 'login', element: <LoginPage /> },
-      { path: 'register', element: <RegisterPage /> },
-      { path: 'studio', element: <StudioPage /> },
-      { path: 'works', element: <WorksPage /> },
-      { path: '*', element: <ErrorPage /> },
-    ],
+    children: [{
+      element: <AppLayout />,
+      children: [
+        { index: true, element: <Navigate to="/studio" replace /> },
+        { path: 'studio', element: <StudioPage /> },
+        { path: 'works', element: <WorksPage /> },
+      ],
+    }],
   },
+  { path: '*', element: <ErrorPage /> },
 ])

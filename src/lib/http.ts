@@ -4,13 +4,15 @@ export class ApiError extends Error {
   readonly status: number
   readonly code?: string | number
   readonly payload?: unknown
+  readonly headers?: Headers
 
-  constructor(message: string, status: number, code?: string | number, payload?: unknown) {
+  constructor(message: string, status: number, code?: string | number, payload?: unknown, headers?: Headers) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
     this.payload = payload
+    this.headers = headers
   }
 }
 
@@ -75,7 +77,7 @@ export const createHttpClient = ({
       })
       const payload = await readResponse(response)
       if (!response.ok) {
-        throw new ApiError(`请求失败（${response.status}）`, response.status, undefined, payload)
+        throw new ApiError(`请求失败（${response.status}）`, response.status, undefined, payload, response.headers)
       }
       // 不假定业务响应结构；调用方按正式接口契约指定 T。
       return payload as T
