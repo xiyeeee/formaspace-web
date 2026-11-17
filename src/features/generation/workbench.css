@@ -1673,3 +1673,24 @@
   color: #8f9c7d;
   line-height: 1.7;
 }
+
+.generation-realtime-status {
+  position: absolute;
+  top: 58px;
+  left: 23px;
+  z-index: 3;
+  max-width: min(360px, 76%);
+  font-size: 10px;
+  color: #9eb291;
+  line-height: 1.8;
+}
+.realtime-connections { display: flex; gap: 8px; flex-wrap: wrap; }
+.realtime-connections>span { border: 1px solid #58634a66; padding: 2px 6px; border-radius: 4px; background: #242b22b3; }
+.realtime-connections>span[data-connected=true] { color: #c4db9d; border-color: #7a935b80; }
+.generation-realtime-status p { margin-top: 7px; font-size: 10px; color: #adba9e; }
+.generation-realtime-status button { margin-top: 5px; pointer-events: auto; color: #c9e69a; }
+.realtime-preview-notice { border-left: 2px solid #a4af72; padding-left: 9px; }
+.sampling-progress { width: min(240px, 90%); margin: 16px auto 0; }
+.sampling-progress>p { margin: 0 0 8px; color: #c6ddb0; font-size: 11px; }
+.sampling-progress>small { display: block; margin-top: 10px; font-size: 10px; color: #a9b698; }
+.has-real-cloud .viewport-message { top: auto; bottom: 126px; transform: translateX(-50%); padding: 8px 0; }

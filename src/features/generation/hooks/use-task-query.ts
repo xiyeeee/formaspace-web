@@ -10,7 +10,7 @@ export const useTaskHistory = (page: number, status?: TaskStatus) => {
   const { user } = useSession()
   return useQuery({ queryKey: ['generation', user?.id, 'tasks', page, status], queryFn: ({ signal }) => getTasks(page, status, signal), retry: false })
 }
-export const useTaskAsset = (task?: GenerationTask) => {
+export const useTaskAsset = (task?: Pick<GenerationTask, 'status' | 'assetId'>) => {
   const { user } = useSession()
   const assetId = task?.status === 'SUCCEEDED' ? task.assetId : null
   return useQuery({
@@ -18,7 +18,7 @@ export const useTaskAsset = (task?: GenerationTask) => {
     queryFn: ({ signal }) => getAsset(assetId!, signal), enabled: Boolean(assetId), retry: false,
   })
 }
-export const useTaskQuery = (taskId: string | null) => {
+export const useTaskQuery = (taskId: string | null, realtimeStable = false) => {
   const { user } = useSession()
   const visible = usePageVisible()
   const failures = useRef({ taskId, lastError: 0, count: 0 })
@@ -31,7 +31,7 @@ export const useTaskQuery = (taskId: string | null) => {
   const { refetch, data, error, isFetching, isError, dataUpdatedAt, errorUpdatedAt } = query
   useEffect(() => {
     if (failures.current.taskId !== taskId) failures.current = { taskId, lastError: 0, count: 0 }
-    if (!taskId || !visible || isFetching || (data && !isTaskRunning(data.status))) return
+    if (!taskId || !visible || (realtimeStable && data) || isFetching || (data && !isTaskRunning(data.status))) return
     if (isError && !isTaskQueryRetryable(error)) return
     if (!data && !isError) return
     if (isError) {
@@ -44,6 +44,6 @@ export const useTaskQuery = (taskId: string | null) => {
     const delay = isError ? getTaskRetryDelay(error, failures.current.count) : 2500
     const timeout = window.setTimeout(() => { void refetch() }, delay)
     return () => window.clearTimeout(timeout)
-  }, [taskId, visible, isFetching, isError, error, data, dataUpdatedAt, errorUpdatedAt, refetch])
+  }, [taskId, visible, realtimeStable, isFetching, isError, error, data, dataUpdatedAt, errorUpdatedAt, refetch])
   return { ...query, reconnecting: isError && isTaskQueryRetryable(error) && (!data || isTaskRunning(data.status)) }
 }

@@ -1,6 +1,7 @@
 import { z } from 'zod'
+import { httpStageSchema, httpInferenceConnectionSchema, previewMetadataSchema } from './lib/realtime/protocol-values'
 
-export const generationModeSchema = z.enum(['DISABLED', 'MOCK', 'HUNYUAN_LOCAL'])
+export const generationModeSchema = z.enum(['DISABLED', 'MOCK', 'HUNYUAN_LOCAL', 'PYTHON_REALTIME'])
 export type GenerationMode = z.infer<typeof generationModeSchema>
 
 export const qualitySchema = z.enum(['STANDARD', 'HIGH'])
@@ -43,6 +44,8 @@ export const taskSchema = z.object({
   simulated: z.boolean(), requestedParameters: createTaskSchema.nullable(), resolvedParameters: resolvedParametersSchema.nullable(),
   assetId: z.string().nullable(), errorCode: z.string().nullable(), errorMessage: z.string().nullable(),
   createdAt: z.string(), startedAt: z.string().nullable(), finishedAt: z.string().nullable(),
+  stage: httpStageSchema.nullish(), completedSteps: z.number().int().nonnegative().safe().nullish(), totalSteps: z.number().int().nonnegative().safe().nullish(),
+  latestPreview: previewMetadataSchema.nullish(), connectionState: httpInferenceConnectionSchema.nullish(),
 })
 export type GenerationTask = z.infer<typeof taskSchema>
 export const taskPageSchema = z.object({ records: z.array(taskSchema), total: z.number(), page: z.number(), size: z.number() })

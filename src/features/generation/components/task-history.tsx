@@ -16,17 +16,20 @@ const TaskCard = ({ task, selected, onSelect }: { task: GenerationTask; selected
   </button>
 }
 export type TaskHistoryProps = {
-  history: ReturnType<typeof useTaskHistory>; selectedId: string | null; onSelect: (task: GenerationTask) => void
+  history: ReturnType<typeof useTaskHistory>; currentTask?: GenerationTask; selectedId: string | null; onSelect: (task: GenerationTask) => void
   page: number; onPageChange: (page: number) => void; status?: TaskStatus; onStatusChange: (status?: TaskStatus) => void; onNew: () => void
 }
-export const TaskHistory = ({ history, selectedId, onSelect, page, onPageChange, status, onStatusChange, onNew }: TaskHistoryProps) => (
+export const TaskHistory = ({ history, currentTask, selectedId, onSelect, page, onPageChange, status, onStatusChange, onNew }: TaskHistoryProps) => (
   <section className="task-history" aria-label="历史任务">
     <div className="history-heading"><h2>我的创作 <small>{history.data?.total ?? '—'}</small></h2><div><Button variant="ghost" size="icon-sm" onClick={() => void history.refetch()} disabled={history.isFetching} aria-label="刷新历史任务"><RefreshCw size={14} className={history.isFetching ? 'animate-spin' : ''}/></Button><Button variant="ghost" size="icon-sm" aria-label="开始新创作" onClick={onNew}><Plus size={16}/></Button></div></div>
     <label className="history-filter"><span>任务状态</span><select value={status ?? ''} onChange={(event) => onStatusChange(event.target.value ? event.target.value as TaskStatus : undefined)}><option value="">全部任务</option>{Object.entries(taskLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
     {history.isPending && <div className="history-empty"><LoaderCircle className="animate-spin" size={22}/><p>读取创作记录…</p></div>}
     {history.isError && <div className="panel-error" role="alert"><p>{generationErrorMessage(history.error)}</p><Button size="sm" variant="outline" onClick={() => void history.refetch()}>重试</Button></div>}
     {history.data?.records.length === 0 && <div className="history-empty"><History size={25}/><p>{status ? '没有此状态的任务' : '你的灵感，等待成形'}</p><small>{status ? '试试其他筛选条件' : '从左侧上传第一张图片'}</small></div>}
-    <div className="task-grid">{history.data?.records.map((task) => <TaskCard key={task.id} task={task} selected={selectedId === task.id} onSelect={() => onSelect(task)}/>)}</div>
+    <div className="task-grid">{history.data?.records.map((record) => {
+      const task = currentTask?.id === record.id ? currentTask : record
+      return <TaskCard key={task.id} task={task} selected={selectedId === task.id} onSelect={() => onSelect(task)}/>
+    })}</div>
     {history.data && (page > 1 || history.data.total > history.data.size) && <div className="history-pagination"><Button variant="ghost" size="icon-sm" disabled={page === 1 || history.isFetching} aria-label="上一页" onClick={() => onPageChange(page - 1)}><ChevronLeft/></Button><span>{page} / {Math.max(1, Math.ceil(history.data.total / history.data.size))}</span><Button variant="ghost" size="icon-sm" disabled={page * history.data.size >= history.data.total || history.isFetching} aria-label="下一页" onClick={() => onPageChange(page + 1)}><ChevronRight/></Button></div>}
   </section>
 )

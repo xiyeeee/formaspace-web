@@ -42,3 +42,5 @@ Token 使用内存 + sessionStorage，不保存密码、验证码或用户资料
 工作台实现、文件职责、实际后端契约和验证边界见 [工作台说明](docs/workbench.md)。默认连接现有 `/api`，DISABLED 禁用生成，MOCK 显著标记演示；后端尚未运行时可读取失败提示并重试。
 
 真实混元模式已接入 `HUNYUAN_LOCAL` 能力解析与生成开关，质量档位和参数范围由后端 capabilities 控制；服务未就绪时保留上传与历史访问。模型重启、超时、提交不确定等任务错误有对应提示。详细验证记录见 [混元对接说明](docs/hunyuan-local-integration.md)。
+
+实时进度与中间点云接入见 [前端实时展示说明](docs/frontend-realtime.md)。当前默认使用 Java 已实现的 HTTP 实时字段和受保护点云恢复；待票据与浏览器 WS 部署后，设置 `VITE_GENERATION_WS_ENABLED=true` 启用原生 WS 客户端。
