@@ -1,8 +1,8 @@
 import { ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { ParameterControl } from './parameter-control'
 import { getBackgroundSetting, getDraftPreview } from '../lib/generation-settings'
 import type { GenerationCapabilities } from '../lib/generation-settings'
 import type { GenerationDraft } from '../types'
@@ -24,14 +24,14 @@ export const GenerationSettings = ({ capabilities, draft, onChange }: Props) => 
       <details className="advanced-settings"><summary><span><SlidersHorizontal size={15}/>高级设置</span><ChevronDown size={16}/></summary>
         <div className="advanced-content">
           <div className="setting-toggle"><div><Label htmlFor="remove-background">去除背景</Label>{!background.supported && <small>由当前服务固定处理</small>}</div><Switch id="remove-background" checked={background.value} disabled={!background.supported} onCheckedChange={(removeBackground) => patch({ removeBackground })}/></div>
-          {capabilities.advancedParameters.seed?.supported && <><div className="setting-toggle"><Label htmlFor="random-seed">随机种子</Label><Switch id="random-seed" checked={draft.randomSeed} onCheckedChange={(randomSeed) => patch({ randomSeed })}/></div>{!draft.randomSeed && <div className="parameter-field"><Label htmlFor="generation-seed">指定种子</Label><Input id="generation-seed" type="number" min={capabilities.advancedParameters.seed.minimum ?? 0} max={seedCapability?.maximum ?? undefined} step={1} value={draft.seed} onChange={(event) => patch({ seed: event.target.value })} placeholder={`${seedCapability?.minimum ?? 0} ～ ${seedCapability?.maximum ?? "上限以服务为准"}`}/></div>}</>}
-          {numericFields.filter(({ key }) => capabilities.advancedParameters[key]?.supported).map(({ key, label, step }) => {
-            const parameter = capabilities.advancedParameters[key]
-            const fixed = parameter.minimum !== null && parameter.minimum === parameter.maximum
-            const readOnly = fixed && (!draft[key] || Number(draft[key]) === parameter.minimum)
-            return <div key={key} className="parameter-field"><Label htmlFor={`generation-${key}`}>{label}<small>{fixed ? `当前固定为 ${parameter.minimum}` : `${parameter.minimum ?? "—"} – ${parameter.maximum ?? "—"}`}</small></Label><Input id={`generation-${key}`} type="number" min={parameter.minimum ?? undefined} max={parameter.maximum ?? undefined} step={step} readOnly={readOnly} value={draft[key]} onChange={(event) => patch({ [key]: event.target.value })} placeholder={`预设 ${preset?.[key] ?? '—'}`}/></div>
-          })}
-          {capabilities.advancedParameters.octreeResolution?.supported && <div className="parameter-field"><Label htmlFor="generation-resolution">几何分辨率</Label><select id="generation-resolution" value={draft.octreeResolution} onChange={(event) => patch({ octreeResolution: event.target.value })}><option value="">使用预设（{preset?.octreeResolution}）</option>{capabilities.advancedParameters.octreeResolution.allowedValues?.map((value) => <option key={value} value={value}>{value}</option>)}</select></div>}
+          {seedCapability?.supported && <>
+            <div className="setting-toggle"><Label htmlFor="random-seed">随机种子</Label><Switch id="random-seed" checked={draft.randomSeed} onCheckedChange={(randomSeed) => patch({ randomSeed, seed: !randomSeed && !draft.seed ? '0' : draft.seed })}/></div>
+            {!draft.randomSeed && <ParameterControl id="generation-seed" label="指定种子" value={draft.seed} defaultValue={0} resetValue="0" emptyHint="请输入种子，或开启随机种子" capability={seedCapability} onChange={(seed) => patch({ seed })}/>}
+          </>}
+          {numericFields.filter(({ key }) => capabilities.advancedParameters[key]?.supported).map(({ key, label, step }) => (
+            <ParameterControl key={key} id={`generation-${key}`} label={label} value={draft[key]} defaultValue={preset?.[key] ?? Number(capabilities.advancedParameters[key].defaultValue ?? 0)} capability={capabilities.advancedParameters[key]} step={step} slider={key === 'inferenceSteps'} onChange={(value) => patch({ [key]: value })}/>
+          ))}
+          {capabilities.advancedParameters.octreeResolution?.supported && <ParameterControl id="generation-resolution" label="几何分辨率" value={draft.octreeResolution} defaultValue={preset?.octreeResolution ?? Number(capabilities.advancedParameters.octreeResolution.defaultValue ?? 128)} capability={capabilities.advancedParameters.octreeResolution} onChange={(octreeResolution) => patch({ octreeResolution })}/>}
           <Button type="button" variant="ghost" size="sm" className="restore-settings" onClick={() => patch({ seed: '', randomSeed: true, inferenceSteps: '', guidanceScale: '', octreeResolution: '' })}>恢复预设</Button>
         </div>
       </details>

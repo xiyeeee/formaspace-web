@@ -9,6 +9,7 @@ const nullableNumber = z.number().finite().nullable()
 const parameterCapabilitySchema = z.object({
   supported: z.boolean(), defaultValue: z.union([z.number(), z.boolean()]).nullable(),
   minimum: nullableNumber, maximum: nullableNumber, allowedValues: z.array(z.number()).nullable(),
+  rangeAdvisory: z.boolean().optional(),
 })
 const presetSchema = z.object({ simulated: z.boolean(), inferenceSteps: z.number(), guidanceScale: z.number(), octreeResolution: z.number() })
 export const capabilitiesSchema = z.object({

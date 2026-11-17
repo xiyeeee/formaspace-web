@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router'
 import { useSession } from '@/features/auth/lib/session-state'
@@ -23,7 +24,6 @@ const StudioWorkspace = ({ userId }: { userId: string }) => {
   const [params, setParams] = useSearchParams()
   const taskId = params.get('taskId')
   const [draft, setDraft] = useState<GenerationDraft>(initialDraft)
-  const [draftError, setDraftError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<TaskStatus>()
   const [newDraft, setNewDraft] = useState(false)
@@ -46,19 +46,18 @@ const StudioWorkspace = ({ userId }: { userId: string }) => {
   useEffect(() => {
     if (task && !isTaskRunning(task.status)) void queryClient.invalidateQueries({ queryKey: ['generation', userId, 'tasks'] })
   }, [task, userId])
-  const startNew = () => { setNewDraft(true); setParams({}); setDraftError(null) }
+  const startNew = () => { setNewDraft(true); setParams({}) }
   const generate = () => {
     if (!capabilities.data?.canGenerate || !upload.selection?.uploaded || submission.pending) return
     try {
       const request = buildTaskRequest(capabilities.data, draft, upload.selection.uploaded.id)
-      setDraftError(null)
       submission.submit(request)
-    } catch (cause) { setDraftError(generationErrorMessage(cause)) }
+    } catch (cause) { toast.error(generationErrorMessage(cause), { id: 'generation-validation' }) }
   }
   return <div className="studio-workbench">
     <UploadPanel upload={upload} submission={submission} capabilities={capabilities.data} capabilityError={capabilities.error} capabilityLoading={capabilities.isPending}
-      onRetryCapabilities={() => void capabilities.refetch()} draft={draft} onDraftChange={(next) => { setDraft(next); setDraftError(null) }}
-      onSelectFile={(file) => { if (capabilities.data) { startNew(); void upload.select(file, capabilities.data) } }} onGenerate={generate} draftError={draftError} running={Boolean(task && isTaskRunning(task.status))}/>
+      onRetryCapabilities={() => void capabilities.refetch()} draft={draft} onDraftChange={setDraft}
+      onSelectFile={(file) => { if (capabilities.data) { startNew(); void upload.select(file, capabilities.data) } }} onGenerate={generate} running={Boolean(task && isTaskRunning(task.status))}/>
     <ModelViewport mode={capabilities.data?.mode} generationAvailable={capabilities.data?.generationAvailable} reconnecting={taskQuery.reconnecting} key={taskId || 'draft'} task={task} asset={assetQuery.data} taskError={taskQuery.error} loading={Boolean(taskId && taskQuery.isPending)} onRetryTask={() => void taskQuery.refetch()}/>
     <aside className="history-panel"><div className="right-panel-tabs"><span className="active">创作记录</span><span>HISTORY & DETAILS</span></div><div className="right-panel-scroll"><TaskHistory history={history} selectedId={taskId} onSelect={selectTask} page={page} onPageChange={setPage} status={status} onStatusChange={(next) => { setStatus(next); setPage(1) }} onNew={startNew}/><AssetDetails key={taskId} task={task} asset={assetQuery.data} error={assetQuery.error} loading={assetQuery.isFetching} onRetry={() => { if (task?.assetId) void assetQuery.refetch(); else void taskQuery.refetch() }}/></div></aside>
   </div>

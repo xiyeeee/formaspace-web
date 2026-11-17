@@ -1570,3 +1570,106 @@
   background: #20251dba;
   font-size: 9px;
 }
+
+.parameter-field label {
+  align-items: center;
+  gap: 8px;
+  line-height: 1.6;
+}
+.parameter-field label small {
+  text-align: right;
+}
+.parameter-field input,
+.parameter-field select {
+  height: 36px;
+  border-radius: 7px;
+  padding: 7px 10px;
+  line-height: 20px;
+}
+.parameter-field input:focus-visible,
+.parameter-field select:focus-visible {
+  outline: none;
+  border-color: #a8be68;
+  box-shadow: 0 0 0 1px #a8be6840;
+}
+
+.parameter-control {
+  margin: 15px 0;
+  padding: 12px;
+  border: 1px solid #42493a;
+  border-radius: 8px;
+  background: #252923;
+}
+.parameter-control-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.parameter-control-heading label {
+  font-size: 11px;
+  color: #c4cbb8;
+  line-height: 1.6;
+}
+.parameter-control-value {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  border: 1px solid #4c5441;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.parameter-control-value:focus-within {
+  border-color: #a8be68;
+}
+.workspace-shell .parameter-control-value input {
+  width: 76px;
+  height: 29px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 0;
+  font-size: 12px;
+  text-align: right;
+  box-shadow: none;
+  outline: none;
+  appearance: textfield;
+}
+.parameter-control-value input::-webkit-inner-spin-button,
+.parameter-control-value input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.parameter-control-value button {
+  width: 25px;
+  height: 29px;
+  border-radius: 0;
+  border-left: 1px solid #42493a;
+  color: #a5b48e;
+}
+.parameter-control-slider {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 17px;
+}
+.parameter-control-slider>span {
+  color: #8b9a78;
+  font-size: 9px;
+}
+.parameter-control-slider [data-slot=slider] {
+  flex: 1;
+  min-width: 0;
+}
+.parameter-control-slider [data-slot=slider-thumb] {
+  width: 12px;
+  height: 12px;
+  border-color: #b3cf79;
+  background: #e2edc8;
+}
+.parameter-control-hint {
+  display: block;
+  margin-top: 10px;
+  font-size: 9px;
+  color: #8f9c7d;
+  line-height: 1.7;
+}

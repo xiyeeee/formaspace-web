@@ -1,4 +1,5 @@
 import { useDropzone } from 'react-dropzone'
+import { toast } from 'sonner'
 import { ArrowUpRight, Check, ImagePlus, LoaderCircle, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useProtectedImage } from '../hooks/use-protected-image'
@@ -24,9 +25,9 @@ type Props = {
   upload: ReturnType<typeof useImageUpload>; submission: ReturnType<typeof useTaskSubmission>
   capabilities?: GenerationCapabilities; capabilityError: unknown; capabilityLoading: boolean
   onRetryCapabilities: () => void; draft: GenerationDraft; onDraftChange: (draft: GenerationDraft) => void
-  onSelectFile: (file: File) => void; onGenerate: () => void; draftError: string | null; running: boolean
+  onSelectFile: (file: File) => void; onGenerate: () => void; running: boolean
 }
-export const UploadPanel = ({ upload, submission, capabilities, capabilityError, capabilityLoading, onRetryCapabilities, draft, onDraftChange, onSelectFile, onGenerate, draftError, running }: Props) => {
+export const UploadPanel = ({ upload, submission, capabilities, capabilityError, capabilityLoading, onRetryCapabilities, draft, onDraftChange, onSelectFile, onGenerate, running }: Props) => {
   const { selection } = upload
   const locked = Boolean(submission.pending || submission.submitting)
   const disabled = !capabilities || locked
@@ -34,7 +35,23 @@ export const UploadPanel = ({ upload, submission, capabilities, capabilityError,
     accept: capabilities?.accept, maxFiles: 1, multiple: false, disabled,
     onDrop: (files) => { if (files[0]) onSelectFile(files[0]) },
   })
-  const generateDisabled = disabled || !capabilities?.canGenerate || !capabilities.qualities.length || selection?.status !== 'ready' || running
+  const handleGenerate = () => {
+    if (submission.submitting) return
+    const reason = [
+      { blocked: Boolean(submission.pending), message: '请先重试确认上一笔提交，避免重复创建任务。' },
+      { blocked: capabilityLoading, message: '正在读取生成配置，请稍候再试。' },
+      { blocked: Boolean(capabilityError) || !capabilities, message: '生成配置读取失败，请重新获取配置。' },
+      { blocked: capabilities?.mode === 'DISABLED', message: '生成服务暂未启用，请先开启后端生成服务。' },
+      { blocked: !capabilities?.generationAvailable, message: '生成服务暂未就绪，请稍后重试或重新检查服务。' },
+      { blocked: !capabilities?.canGenerate || !capabilities?.qualities.length, message: '当前服务不支持单图生成，请重新检查配置。' },
+      { blocked: running, message: '当前任务正在处理中，请等待完成后再生成。' },
+      { blocked: selection?.status === 'uploading', message: '图片正在上传，请等待上传完成。' },
+      { blocked: selection?.status === 'failed', message: '图片上传失败，请先重试上传。' },
+      { blocked: selection?.status !== 'ready' || !selection?.uploaded, message: '请先选择图片并完成上传。' },
+    ].find(({ blocked }) => blocked)?.message
+    if (reason) { toast.info(reason, { id: 'generation-validation' }); return }
+    onGenerate()
+  }
   return (
     <aside className="upload-panel" aria-labelledby="studio-title">
       <div className="panel-scroll">
@@ -57,8 +74,8 @@ export const UploadPanel = ({ upload, submission, capabilities, capabilityError,
       </div>
       <div className="generate-footer">
         {submission.pending && !submission.submitting && <div className="pending-notice"><strong>有一笔提交等待确认</strong><p>已锁定原图与参数。请先重试确认，避免重复创建任务。</p><Button variant="outline" onClick={submission.retry}>重试确认</Button><details><summary>核对历史后重新编辑</summary><p>原任务可能已创建，请先在右侧核对。放弃确认不会取消服务端任务。</p><Button variant="ghost" size="sm" onClick={submission.discard}>已核对，放弃此确认记录</Button></details></div>}
-        {(draftError || submission.error) && <p role="alert" className="inline-error">{draftError || submission.error}</p>}
-        <Button type="button" className="generate-button" disabled={generateDisabled} onClick={onGenerate}>{submission.submitting ? <><LoaderCircle className="animate-spin"/>提交中</> : <><span>{running ? '任务处理中' : '生成模型'}</span><ArrowUpRight size={20}/></>}</Button>
+        {submission.error && <p role="alert" className="inline-error">{submission.error}</p>}
+        <Button type="button" className="generate-button" disabled={submission.submitting} onClick={handleGenerate}>{submission.submitting ? <><LoaderCircle className="animate-spin"/>提交中</> : <><span>{running ? '任务处理中' : '生成模型'}</span><ArrowUpRight size={20}/></>}</Button>
         <p>{capabilities?.mode === 'MOCK' ? '演示结果与上传图片内容无关' : '让平面的灵感，拥有立体的可能'}</p>
       </div>
     </aside>
