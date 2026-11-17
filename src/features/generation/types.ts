@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+export const generationModeSchema = z.enum(['DISABLED', 'MOCK', 'HUNYUAN_LOCAL'])
+export type GenerationMode = z.infer<typeof generationModeSchema>
+
 export const qualitySchema = z.enum(['STANDARD', 'HIGH'])
 export type Quality = z.infer<typeof qualitySchema>
 const nullableNumber = z.number().finite().nullable()
@@ -9,7 +12,7 @@ const parameterCapabilitySchema = z.object({
 })
 const presetSchema = z.object({ simulated: z.boolean(), inferenceSteps: z.number(), guidanceScale: z.number(), octreeResolution: z.number() })
 export const capabilitiesSchema = z.object({
-  mode: z.enum(['DISABLED', 'MOCK']), generationAvailable: z.boolean(), simulated: z.boolean(),
+  mode: generationModeSchema, generationAvailable: z.boolean(), simulated: z.boolean(),
   modelId: z.string().nullable(), profileId: z.string(), simulationNotice: z.string().nullable(),
   supportedInputModes: z.array(z.string()), qualityPresets: z.partialRecord(qualitySchema, presetSchema),
   textureSupported: z.boolean(), removeBackgroundSupported: z.boolean(),
@@ -50,7 +53,7 @@ export const assetSchema = z.object({
 })
 export type ModelAsset = z.infer<typeof assetSchema>
 export type GenerationDraft = {
-  quality: Quality; generateTexture: boolean; removeBackground: boolean; randomSeed: boolean
+  quality: Quality; generateTexture: boolean; removeBackground: boolean | null; randomSeed: boolean
   seed: string; inferenceSteps: string; guidanceScale: string; octreeResolution: string
 }
 export type PendingSubmission = { key: string; request: CreateTaskRequest }

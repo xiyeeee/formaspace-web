@@ -40,3 +40,5 @@ Token 使用内存 + sessionStorage，不保存密码、验证码或用户资料
 登录页现为龙卷风 → 水母群 → 河流与小船 → 大鲸鱼的连续点云变形，见 [形态变换说明](docs/particle-morph.md)。虹彩流体作为轻量辅助保留，浅色独立预览见 `/effects/fluid-cursor`。
 
 工作台实现、文件职责、实际后端契约和验证边界见 [工作台说明](docs/workbench.md)。默认连接现有 `/api`，DISABLED 禁用生成，MOCK 显著标记演示；后端尚未运行时可读取失败提示并重试。
+
+真实混元模式已接入 `HUNYUAN_LOCAL` 能力解析与生成开关，质量档位和参数范围由后端 capabilities 控制；服务未就绪时保留上传与历史访问。模型重启、超时、提交不确定等任务错误有对应提示。详细验证记录见 [混元对接说明](docs/hunyuan-local-integration.md)。

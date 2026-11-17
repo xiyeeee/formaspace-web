@@ -2,14 +2,16 @@ import { useState } from 'react'
 import { Box, ChevronLeft, ChevronRight, FolderOpen, LoaderCircle, Plus } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
-import { useTaskHistory } from '@/features/generation/hooks/use-task-query'
+import { useTaskAsset, useTaskHistory } from '@/features/generation/hooks/use-task-query'
+import { isSimulatedResult } from '@/features/generation/lib/generation-presentation'
 import { useProtectedImage } from '@/features/generation/hooks/use-protected-image'
 import { generationErrorMessage } from '@/features/generation/lib/generation-errors'
 import type { GenerationTask } from '@/features/generation/types'
 
 const WorkCard = ({ task }: { task: GenerationTask }) => {
   const image = useProtectedImage(task.sourceFileId)
-  return <Link className="work-link" to={`/studio?taskId=${encodeURIComponent(task.id)}`}><div className="work-image">{image ? <img src={image} alt="作品对应的源图片" loading="lazy"/> : <Box size={35}/>}<span>源图片{task.simulated ? ' · 演示结果' : ''}</span></div><h2>创作 {task.id.slice(-6)}</h2><p>{new Date(task.createdAt).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</p></Link>
+  const { data: asset } = useTaskAsset(task)
+  return <Link className="work-link" to={`/studio?taskId=${encodeURIComponent(task.id)}`}><div className="work-image">{image ? <img src={image} alt="作品对应的源图片" loading="lazy"/> : <Box size={35}/>}<span>源图片{isSimulatedResult(task, asset) ? ' · 演示结果' : ''}</span></div><h2>{asset?.name || `创作 ${task.id.slice(-6)}`}</h2><p>{new Date(task.createdAt).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</p></Link>
 }
 export const WorksPage = () => {
   const [page, setPage] = useState(1)

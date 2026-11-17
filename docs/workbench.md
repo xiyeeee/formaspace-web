@@ -39,7 +39,7 @@
 
 - `GenerationCapabilitiesVO`：`qualityPresets` 为 STANDARD/HIGH 键的对象；`advancedParameters` 每项为 supported/defaultValue/minimum/maximum/allowedValues；`uploadConstraints` 为 formats/maximumBytes/maximumPixels。统一适配为可用质量档位、Dropzone accept 和生成可用状态。
 - 后端另提供 `maximumVoxelSteps`，前端检查步数 × 分辨率³ 的组合；`profileId` 与 `simulationNotice` 用于参数属性和演示说明。MOCK 接受参数但不实际去背景、推理或生成贴图。
-- `CreateGenerationDTO`：sourceFileId/quality/generateTexture/advancedOptions；明确覆盖才填数值，空值保持 null，保留 seed=0、guidanceScale=0。种子随机时为 null。不支持项不提交显式高级覆盖，去背景不可用时为 false。
+- `CreateGenerationDTO`：sourceFileId/quality/generateTexture/advancedOptions；明确覆盖才填数值，空值保持 null，保留 seed=0、guidanceScale=0。种子随机时为 null。不支持项不提交显式高级数值覆盖，去背景不可编辑时按后端返回的固定默认值提交。
 - `GenerationTaskVO`：requestedParameters 包含 sourceFileId；resolvedParameters 是平铺实际参数，含 schemaVersion/profileId/numChunks/format。两者允许历史记录为 null；只读展示不重算。
 - `FileUploadVO`：id/originalName/contentType/sizeBytes/previewUrl，允许 previewUrl=null。源图固定走受保护 content 接口，忽略 URL 猜测。
 - `ModelAssetVO`：id/generationTaskId/name/format/sizeBytes/simulated/modelUrl/thumbnailUrl/createdAt。按 assetId 请求已定义的 model/download 端点。
@@ -53,9 +53,11 @@
 
 创建任务先保存 UUID 与不可变请求快照，再发请求。超时、断网、服务错误或无法解析响应时保留确认记录，禁用编辑；刷新后可用原 key 和原请求重试。409 不自动换 key。用户核对历史后可显式放弃确认记录，但此操作不取消服务端任务。确认记录按用户隔离，退出时清理。
 
-详情查询结束后用 setTimeout 等待 2.5 秒再查询，不使用 setInterval。终态、网络错误、后台页面停止轮询，恢复前台或手动重试重新查询；切换任务和卸载清理定时器，旧请求由查询缓存的 AbortSignal 取消。网络故障不改写服务端任务状态。
+详情查询结束后用 setTimeout 等待 2.5 秒再查询，不使用 setInterval。网络、503 等临时错误保留上次任务并按 5/10/20/30 秒退避，兼顾 Retry-After；404、401 等不可重试错误和终态停止自动轮询。后台暂停，恢复前台重新查询；切换任务和卸载清理定时器，旧请求由查询缓存的 AbortSignal 取消。网络故障不改写服务端任务状态。
 
 成功后先获取作品，再带 JWT 获取 GLB；GLTFLoader 解析自包含 GLB 2，拒绝外部资源。模型按边界居中缩放，支持旋转、缩放、重置、全屏和网格开关。没有伪造材质或线框控件。切换任务释放模型几何体、材质、贴图和动画混合器；DPR 上限 1.5，等待点云上限 3,800。减少动效时使用按需渲染，后台暂停渲染。
+
+支持 DISABLED、MOCK、HUNYUAN_LOCAL，始终结合 generationAvailable 与单图能力判断可否生成；历史任务与作品的演示身份取各自 simulated。真实模式的能力驱动、错误码和本轮浏览器检查见 [混元对接说明](hunyuan-local-integration.md)。
 
 ## 验证与边界
 

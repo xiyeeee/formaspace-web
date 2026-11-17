@@ -7,9 +7,9 @@ import { ModelViewport } from '../components/model-viewport'
 import { TaskHistory } from '../components/task-history'
 import { AssetDetails } from '../components/asset-details'
 import { useImageUpload } from '../hooks/use-image-upload'
-import { useTaskHistory, useTaskQuery } from '../hooks/use-task-query'
+import { useTaskAsset, useTaskHistory, useTaskQuery } from '../hooks/use-task-query'
 import { useTaskSubmission } from '../hooks/use-task-submission'
-import { getAsset, getCapabilities } from '../lib/generation-api'
+import { getCapabilities } from '../lib/generation-api'
 import { adaptCapabilities, buildTaskRequest, initialDraft } from '../lib/generation-settings'
 import { generationErrorMessage, isTaskRunning } from '../lib/generation-errors'
 import { queryClient } from '@/lib/query-client'
@@ -28,15 +28,11 @@ const StudioWorkspace = ({ userId }: { userId: string }) => {
   const [status, setStatus] = useState<TaskStatus>()
   const [newDraft, setNewDraft] = useState(false)
   const upload = useImageUpload()
-  const capabilities = useQuery({ queryKey: ['generation', userId, 'capabilities'], queryFn: ({ signal }) => getCapabilities(signal), select: adaptCapabilities, retry: false })
+  const capabilities = useQuery({ queryKey: ['generation', userId, 'capabilities'], queryFn: ({ signal }) => getCapabilities(signal), select: adaptCapabilities, retry: false, staleTime: 15_000, refetchOnWindowFocus: true })
   const history = useTaskHistory(page, status)
   const taskQuery = useTaskQuery(taskId)
   const task = taskQuery.data
-  const assetQuery = useQuery({
-    queryKey: ['generation', userId, 'asset', task?.assetId],
-    queryFn: ({ signal }) => getAsset(task!.assetId!, signal),
-    enabled: task?.status === 'SUCCEEDED' && Boolean(task.assetId), retry: false,
-  })
+  const assetQuery = useTaskAsset(task)
   const selectTask = (selected: GenerationTask) => {
     queryClient.setQueryData(['generation', userId, 'task', selected.id], selected)
     setParams({ taskId: selected.id })
@@ -62,8 +58,8 @@ const StudioWorkspace = ({ userId }: { userId: string }) => {
   return <div className="studio-workbench">
     <UploadPanel upload={upload} submission={submission} capabilities={capabilities.data} capabilityError={capabilities.error} capabilityLoading={capabilities.isPending}
       onRetryCapabilities={() => void capabilities.refetch()} draft={draft} onDraftChange={(next) => { setDraft(next); setDraftError(null) }}
-      onSelectFile={(file) => { if (capabilities.data) { setNewDraft(true); void upload.select(file, capabilities.data) } }} onGenerate={generate} draftError={draftError} running={Boolean(task && isTaskRunning(task.status))}/>
-    <ModelViewport mode={capabilities.data?.mode} key={taskId || 'draft'} task={task} asset={assetQuery.data} taskError={taskQuery.error} loading={Boolean(taskId && taskQuery.isPending)} onRetryTask={() => void taskQuery.refetch()}/>
+      onSelectFile={(file) => { if (capabilities.data) { startNew(); void upload.select(file, capabilities.data) } }} onGenerate={generate} draftError={draftError} running={Boolean(task && isTaskRunning(task.status))}/>
+    <ModelViewport mode={capabilities.data?.mode} generationAvailable={capabilities.data?.generationAvailable} reconnecting={taskQuery.reconnecting} key={taskId || 'draft'} task={task} asset={assetQuery.data} taskError={taskQuery.error} loading={Boolean(taskId && taskQuery.isPending)} onRetryTask={() => void taskQuery.refetch()}/>
     <aside className="history-panel"><div className="right-panel-tabs"><span className="active">创作记录</span><span>HISTORY & DETAILS</span></div><div className="right-panel-scroll"><TaskHistory history={history} selectedId={taskId} onSelect={selectTask} page={page} onPageChange={setPage} status={status} onStatusChange={(next) => { setStatus(next); setPage(1) }} onNew={startNew}/><AssetDetails key={taskId} task={task} asset={assetQuery.data} error={assetQuery.error} loading={assetQuery.isFetching} onRetry={() => { if (task?.assetId) void assetQuery.refetch(); else void taskQuery.refetch() }}/></div></aside>
   </div>
 }

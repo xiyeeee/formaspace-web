@@ -1,5 +1,7 @@
 import { Box, ChevronLeft, ChevronRight, History, LoaderCircle, Plus, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useTaskAsset } from '../hooks/use-task-query'
+import { isSimulatedResult } from '../lib/generation-presentation'
 import { useProtectedImage } from '../hooks/use-protected-image'
 import { generationErrorMessage, isTaskRunning, taskLabels } from '../lib/generation-errors'
 import type { useTaskHistory } from '../hooks/use-task-query'
@@ -7,9 +9,10 @@ import type { GenerationTask, TaskStatus } from '../types'
 
 const TaskCard = ({ task, selected, onSelect }: { task: GenerationTask; selected: boolean; onSelect: () => void }) => {
   const image = useProtectedImage(task.sourceFileId)
+  const { data: asset } = useTaskAsset(task)
   return <button className={`task-card ${selected ? 'selected' : ''}`} onClick={onSelect} aria-pressed={selected}>
-    <div className="task-thumbnail">{image ? <img src={image} alt="任务源图片" loading="lazy"/> : <Box size={29}/>}<span className={`task-state ${task.status.toLowerCase()}`}>{isTaskRunning(task.status) && <LoaderCircle className="animate-spin" size={11}/>} {taskLabels[task.status]}</span></div>
-    <strong>创作 {task.id.slice(-6)}</strong><small>{task.simulated ? '演示任务 · ' : ''}{new Date(task.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}</small>
+    <div className="task-thumbnail">{image ? <img src={image} alt="任务源图片" loading="lazy"/> : <Box size={29}/>}<span className="source-thumbnail-label">源图</span><span className={`task-state ${task.status.toLowerCase()}`}>{isTaskRunning(task.status) && <LoaderCircle className="animate-spin" size={11}/>} {taskLabels[task.status]}</span></div>
+    <strong>{asset?.name || `创作 ${task.id.slice(-6)}`}</strong><small>{isSimulatedResult(task, asset) ? '演示任务 · ' : ''}{new Date(task.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}</small>
   </button>
 }
 export type TaskHistoryProps = {

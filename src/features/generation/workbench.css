@@ -1546,3 +1546,27 @@
     transform:translateX(70%);
   }
 }
+
+.service-notice {
+  padding: 12px;
+  margin-top: 12px;
+  border: 1px solid #59624c;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.8;
+  color: #c8d1b9;
+}
+.service-notice p { margin: 6px 0 10px; color: #a9b299; }
+.pending-source { margin: 14px 0; font-size: 11px; line-height: 1.8; }
+.pending-source p { margin: 8px 0 4px; color: #d1d8c8; }
+.pending-source small { color: #a9b299; }
+.source-thumbnail-label {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  color: #d5dec9;
+  background: #20251dba;
+  font-size: 9px;
+}

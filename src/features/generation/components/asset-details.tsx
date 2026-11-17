@@ -3,6 +3,8 @@ import { Download, FileBox, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getAssetDownload } from '../lib/generation-api'
 import { generationErrorMessage, taskFailureMessage, taskLabels } from '../lib/generation-errors'
+import { assertGlbHeader } from '../lib/model-resources'
+import { isSimulatedResult } from '../lib/generation-presentation'
 import { formatBytes } from '../lib/generation-settings'
 import type { GenerationTask, ModelAsset } from '../types'
 
@@ -11,7 +13,8 @@ const downloadFilename = (disposition: string | null, assetId: string) => {
   const plain = disposition?.match(/filename="([^"]+)"|filename=([^;]+)/i)
   let filename = plain?.[1] ?? plain?.[2] ?? `model-${assetId}.glb`
   try { if (encoded) filename = decodeURIComponent(encoded) } catch { /* 使用普通文件名回退。 */ }
-  return Array.from(filename).filter((character) => character.charCodeAt(0) > 31 && character.charCodeAt(0) !== 127).join('').replace(/[/\\<>:"|?*]/g, '_').trim().slice(0, 180) || `model-${assetId}.glb`
+  const safe = Array.from(filename).filter((character) => character.charCodeAt(0) > 31 && character.charCodeAt(0) !== 127).join('').replace(/[/\\<>:"|?*]/g, '_').trim().slice(0, 180) || `model-${assetId}.glb`
+  return safe.toLowerCase().endsWith('.glb') ? safe : `model-${assetId}.glb`
 }
 export const AssetDetails = ({ task, asset, error, loading, onRetry }: { task?: GenerationTask; asset?: ModelAsset; error: unknown; loading: boolean; onRetry: () => void }) => {
   const [downloading, setDownloading] = useState(false)
@@ -27,6 +30,8 @@ export const AssetDetails = ({ task, asset, error, loading, onRetry }: { task?: 
     try {
       const { blob, headers } = await getAssetDownload(asset.id, controller.signal)
       if (controller.signal.aborted) return
+      assertGlbHeader(await blob.slice(0, 12).arrayBuffer(), blob.size)
+      if (controller.signal.aborted) return
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
@@ -41,8 +46,8 @@ export const AssetDetails = ({ task, asset, error, loading, onRetry }: { task?: 
   return <section className="asset-details" aria-label="当前作品属性">
     <div className="details-heading"><FileBox size={16}/><h2>{asset?.name || (task ? `创作 ${task.id.slice(-6)}` : '作品信息')}</h2></div>
     {!task && <p className="muted-copy">选择历史任务，查看作品与生成参数。</p>}
-    {task && <><div className="asset-meta"><span>{asset ? `${asset.format} · ${formatBytes(asset.sizeBytes)}` : taskLabels[task.status]}</span>{task.simulated && <span className="demo-badge">演示结果</span>}</div>
-      {task.status === 'FAILED' && <p className="inline-error" role="alert">{taskFailureMessage(task.errorCode)}</p>}
+    {task && <><div className="asset-meta"><span>{asset ? `${asset.format} · ${formatBytes(asset.sizeBytes)}` : taskLabels[task.status]}</span>{isSimulatedResult(task, asset) && <span className="demo-badge">演示结果</span>}</div>
+      {task.status === 'FAILED' && <p className="inline-error" role="alert">{taskFailureMessage(task.errorCode, task.errorMessage)}</p>}
       {task.status === 'SUCCEEDED' && !task.assetId && <div className="panel-error"><p>任务已成功，但尚未返回作品 ID。</p><Button variant="outline" size="sm" onClick={onRetry}>重试读取任务</Button></div>}
       {loading && <p className="panel-notice"><LoaderCircle className="animate-spin" size={14}/>读取作品信息…</p>}
       {error && <div className="panel-error"><p>{generationErrorMessage(error)}</p><Button variant="outline" size="sm" onClick={onRetry}>重试读取作品</Button></div>}

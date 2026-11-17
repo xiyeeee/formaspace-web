@@ -1,7 +1,7 @@
 import type { Capabilities, CreateTaskRequest, GenerationDraft } from '../types'
 
 export const initialDraft: GenerationDraft = {
-  quality: 'STANDARD', generateTexture: false, removeBackground: true, randomSeed: true,
+  quality: 'STANDARD', generateTexture: false, removeBackground: null, randomSeed: true,
   seed: '', inferenceSteps: '', guidanceScale: '', octreeResolution: '',
 }
 const imageFormats: Record<string, { mime: string; extensions: string[] }> = {
@@ -11,13 +11,21 @@ export const adaptCapabilities = (capabilities: Capabilities) => ({
   ...capabilities,
   qualities: (['STANDARD', 'HIGH'] as const).filter((quality) => capabilities.qualityPresets[quality]),
   accept: Object.fromEntries(capabilities.uploadConstraints.formats.filter((format) => imageFormats[format]).map((format) => [imageFormats[format].mime, imageFormats[format].extensions])),
-  canGenerate: capabilities.mode === 'MOCK' && capabilities.generationAvailable && capabilities.supportedInputModes.includes('SINGLE_IMAGE'),
+  canGenerate: capabilities.mode !== 'DISABLED' && capabilities.generationAvailable
+    && capabilities.supportedInputModes.includes('SINGLE_IMAGE')
+    && Object.keys(capabilities.qualityPresets).length > 0,
 })
 export type GenerationCapabilities = ReturnType<typeof adaptCapabilities>
 export const getDraftPreview = (capabilities: GenerationCapabilities, draft: GenerationDraft) => {
   const quality = capabilities.qualities.includes(draft.quality) ? draft.quality : capabilities.qualities[0]
-  const preset = capabilities.qualityPresets[quality]
+  const preset = quality ? capabilities.qualityPresets[quality] : undefined
   return { quality, preset }
+}
+export const getBackgroundSetting = (capabilities: GenerationCapabilities, draft: GenerationDraft) => {
+  const parameter = capabilities.advancedParameters.removeBackground
+  const supported = capabilities.removeBackgroundSupported && Boolean(parameter?.supported)
+  const defaultValue = typeof parameter?.defaultValue === 'boolean' ? parameter.defaultValue : true
+  return { supported, value: supported ? draft.removeBackground ?? defaultValue : defaultValue }
 }
 export const buildTaskRequest = (capabilities: GenerationCapabilities, draft: GenerationDraft, sourceFileId: string): CreateTaskRequest => {
   const { quality, preset } = getDraftPreview(capabilities, draft)
@@ -43,7 +51,7 @@ export const buildTaskRequest = (capabilities: GenerationCapabilities, draft: Ge
   return {
     sourceFileId, quality, generateTexture: capabilities.textureSupported && draft.generateTexture,
     advancedOptions: {
-      removeBackground: capabilities.removeBackgroundSupported && capabilities.advancedParameters.removeBackground?.supported ? draft.removeBackground : false,
+      removeBackground: getBackgroundSetting(capabilities, draft).value,
       seed: readOverride('seed', '随机种子', true), inferenceSteps, guidanceScale, octreeResolution,
     },
   }

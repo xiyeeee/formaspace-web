@@ -3,7 +3,7 @@ import { LoadingManager } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import { getAssetModel } from '../lib/generation-api'
-import { centerModel, disposeModel } from '../lib/model-resources'
+import { assertGlbHeader, centerModel, disposeModel } from '../lib/model-resources'
 import { generationErrorMessage } from '../lib/generation-errors'
 
 export const useModelResource = (assetId: string | undefined, revision: number) => {
@@ -14,7 +14,7 @@ export const useModelResource = (assetId: string | undefined, revision: number) 
     let model: GLTF | undefined
     const release = () => {
       if (!model) return
-      disposeModel(model.scene)
+      disposeModel([...new Set([model.scene, ...model.scenes])])
       model = undefined
     }
     const load = async () => {
@@ -22,8 +22,7 @@ export const useModelResource = (assetId: string | undefined, revision: number) 
         const { blob } = await getAssetModel(assetId, controller.signal)
         const buffer = await blob.arrayBuffer()
         if (controller.signal.aborted) return
-        const header = new DataView(buffer)
-        if (buffer.byteLength < 12 || header.getUint32(0, true) !== 0x46546c67 || header.getUint32(4, true) !== 2) throw new Error('服务未返回有效的 GLB 2 模型文件')
+        assertGlbHeader(buffer)
         const manager = new LoadingManager()
         manager.setURLModifier((url) => {
           if (!url.startsWith('blob:') && !url.startsWith('data:')) throw new Error('模型包含外部资源，当前仅支持自包含 GLB')
