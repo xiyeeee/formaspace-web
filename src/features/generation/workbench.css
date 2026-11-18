@@ -1716,3 +1716,12 @@
 .viewport-sampling-status .task-progress { width: 100%; margin: 0; }
 
 .point-print-status { width: min(280px, calc(100% - 48px)); gap: 12px; }
+
+
+.generation-task-timing { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 12px; font-size: 11px; font-variant-numeric: tabular-nums; line-height: 1.6; }
+.generation-task-timing>span { color: #c6ddb0; font-size: 11px; }
+.generation-task-timing>small { color: #a6b39c; font-size: 10px; }
+.generation-timing-status { position: absolute; z-index: 4; left: 24px; bottom: 104px; width: min(340px, calc(100% - 48px)); padding: 5px 0; pointer-events: none; }
+.generation-timing-status [data-terminal="true"] { padding: 7px 11px; border-radius: 6px; background: #17211ce8; }
+
+.viewport-sampling-status .generation-task-timing { margin-top: 10px; }
