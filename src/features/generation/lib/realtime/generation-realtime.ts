@@ -3,7 +3,8 @@ import { env } from '@/lib/env'
 import { queryClient } from '@/lib/query-client'
 import { generationErrorMessage, isTaskRunning } from '../generation-errors'
 import type { GenerationTask, TaskStatus } from '../../types'
-import { assertPreviewPath, createCoordinateFrame, createEventSequence, toPointCloud } from './generation-events'
+import { assertPreviewPath, coordinateFrameFromBounds, createCoordinateFrame, createEventSequence, toPointCloud } from './generation-events'
+import { createPointBatchBuffer } from './point-batch-buffer'
 import type { CoordinateFrame, GenerationEvent, PointCloud, PreviewMetadata } from './generation-events'
 import type { z } from 'zod'
 import type { httpInferenceConnectionSchema } from './protocol-values'
@@ -36,19 +37,22 @@ export const createGenerationRealtime = (taskId: string | null, userId: string, 
   let latestPreview: PreviewMetadata | null = null
   let terminalKey = ''
   let client: ReturnType<typeof createGenerationSocket> | null = null
+  let pointBatches: ReturnType<typeof createPointBatchBuffer> | null = null
+  let batchTimer: ReturnType<typeof setTimeout> | undefined
   const publish = (patch: Partial<RealtimeState>) => {
     if (!active || !isCurrent()) return
     state = { ...state, ...patch }
     listeners.forEach((listener) => listener())
   }
-  const previewClosed = () => settled && state.task?.status !== 'FAILED'
+  const hasCompleteCloud = (version: number) => !!state.cloud && state.cloud.version >= version && state.cloud.pointCount === state.cloud.totalPointCount
+  const previewClosed = () => settled && state.task?.status !== 'FAILED' && (!latestPreview || hasCompleteCloud(latestPreview.version))
   const acceptCloud = (cloud: PointCloud) => {
-    if (!active || previewClosed() || cloud.taskId !== taskId || cloud.version <= state.appliedPreviewVersion || cloud.version <= (state.cloud?.version ?? 0)) return
+    if (!active || previewClosed() || cloud.taskId !== taskId || cloud.version < (state.cloud?.version ?? 0) || (cloud.version === state.cloud?.version && cloud.pointCount <= state.cloud.pointCount)) return
     publish({ cloud, coordinateFrame: state.coordinateFrame ?? createCoordinateFrame(cloud), previewMessage: null })
   }
   const downloadPreview = async (preview: PreviewMetadata, force = false) => {
-    if (!taskId || previewClosed() || !active || !isCurrent() || preview.version <= state.appliedPreviewVersion) return
-    if (!force && (preview.version === loadingVersion || preview.version <= (state.cloud?.version ?? 0))) return
+    if (!taskId || previewClosed() || !active || !isCurrent() || hasCompleteCloud(preview.version)) return
+    if (!force && preview.version === loadingVersion) return
     previewRequest?.abort()
     const controller = new AbortController()
     const current = epoch
@@ -71,6 +75,13 @@ export const createGenerationRealtime = (taskId: string | null, userId: string, 
     latestPreview = preview
     publish({ notifiedPreviewVersion: preview.version })
     void downloadPreview(preview)
+  }
+  const awaitNextBatch = () => {
+    clearTimeout(batchTimer)
+    batchTimer = setTimeout(() => {
+      pointBatches = null
+      if (latestPreview) void downloadPreview(latestPreview, true)
+    }, 2000)
   }
   const coordinateTerminal = (task: RealtimeTask) => {
     if (isTaskRunning(task.status)) return
@@ -108,7 +119,15 @@ export const createGenerationRealtime = (taskId: string | null, userId: string, 
       latestPreview = { version: event.previewVersion, sourceStep: payload.sourceStep, pointCount: payload.pointCount, positionsPath: payload.positionsPath }
       publish({ notifiedPreviewVersion: event.previewVersion })
       previewRequest?.abort()
-      acceptCloud(toPointCloud({ ...payload, taskId: event.taskId, previewVersion: event.previewVersion }))
+      if (!('positions' in payload)) {
+        pointBatches = createPointBatchBuffer(event.taskId, event.previewVersion, event.sequence, payload.sourceStep, payload.pointCount)
+        publish({ coordinateFrame: state.coordinateFrame ?? coordinateFrameFromBounds(payload.bounds) })
+        awaitNextBatch()
+      } else {
+        pointBatches = null
+        clearTimeout(batchTimer)
+        acceptCloud(toPointCloud({ ...payload, taskId: event.taskId, previewVersion: event.previewVersion }))
+      }
     }
     if (event.type === 'preview_failed') publish({ previewMessage: event.payload.fatal ? '中间预览失败，正在等待任务最终状态。' : '本次中间预览未提取成功，生成继续。' })
     coordinateTerminal(task)
@@ -125,11 +144,25 @@ export const createGenerationRealtime = (taskId: string | null, userId: string, 
     }
     client = createGenerationSocket({
       taskId, isCurrent,
-      onSubscribe: sequence.beginSnapshot,
+      onSubscribe: () => { pointBatches = null; clearTimeout(batchTimer); sequence.beginSnapshot() },
       onConnection: (connection, connectionMessage) => { if (current === epoch) publish({ connection, connectionMessage }) },
       onEvent: (message) => {
         if (!active || !isCurrent() || current !== epoch || settled) return
         if (isBusinessEvent(message)) return receive(message)
+        if (message.type === 'point_batch' && pointBatches) {
+          try {
+            const cloud = pointBatches.append(message)
+            if (cloud) {
+              acceptCloud(cloud)
+              if (cloud.pointCount === cloud.totalPointCount) clearTimeout(batchTimer)
+              else awaitNextBatch()
+            }
+          } catch {
+            pointBatches = null
+            clearTimeout(batchTimer)
+            if (latestPreview) void downloadPreview(latestPreview, true)
+          }
+        }
         if (message.type === 'connection_status') publish({ inferenceConnection: message.payload.connectionState })
       },
     })
@@ -147,10 +180,12 @@ export const createGenerationRealtime = (taskId: string | null, userId: string, 
     finish: () => {
       if (settled) return
       settled = true
-      if (state.task?.status !== 'FAILED') previewRequest?.abort()
+      clearTimeout(batchTimer)
+      if (latestPreview && !hasCompleteCloud(latestPreview.version)) void downloadPreview(latestPreview, true)
+      else if (state.task?.status !== 'FAILED') previewRequest?.abort()
       client?.finish()
     },
-    dispose: () => { active = false; epoch++; previewRequest?.abort(); client?.dispose(); client = null; loadingVersion = 0 },
+    dispose: () => { active = false; epoch++; clearTimeout(batchTimer); previewRequest?.abort(); client?.dispose(); client = null; loadingVersion = 0 },
   }
 }
 

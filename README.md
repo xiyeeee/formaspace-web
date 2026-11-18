@@ -44,3 +44,5 @@ Token 使用内存 + sessionStorage，不保存密码、验证码或用户资料
 真实混元模式已接入 `HUNYUAN_LOCAL` 能力解析与生成开关，质量档位和参数范围由后端 capabilities 控制；服务未就绪时保留上传与历史访问。模型重启、超时、提交不确定等任务错误有对应提示。详细验证记录见 [混元对接说明](docs/hunyuan-local-integration.md)。
 
 实时进度与中间点云接入见 [前端实时展示说明](docs/frontend-realtime.md)。当前默认使用 Java 已实现的 HTTP 实时字段和受保护点云恢复；待票据与浏览器 WS 部署后，设置 `VITE_GENERATION_WS_ENABLED=true` 启用原生 WS 客户端。
+
+工作台支持每批 50 点的真实点云传输与打印头逐点落点，协议、恢复行为和验证记录见 [点云打印说明](docs/point-printing.md)。

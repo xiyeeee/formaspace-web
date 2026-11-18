@@ -1694,3 +1694,7 @@
 .sampling-progress>p { margin: 0 0 8px; color: #c6ddb0; font-size: 11px; }
 .sampling-progress>small { display: block; margin-top: 10px; font-size: 10px; color: #a9b698; }
 .has-real-cloud .viewport-message { top: auto; bottom: 126px; transform: translateX(-50%); padding: 8px 0; }
+
+.point-print-status { position: absolute; z-index: 4; left: 24px; bottom: 104px; display: grid; gap: 6px; padding: 11px 15px; border: 1px solid #b9e45a33; border-radius: 8px; background: #17211ce8; color: #d7ef9b; font-size: 12px; pointer-events: none; }
+.point-print-status span { color: #96a18e; font-size: 10px; }
+.model-viewport.has-real-cloud .viewport-message { top: 16%; bottom: auto; transform: translate(-50%, 0); }

@@ -8,6 +8,8 @@ const taskId = z.string().min(1).max(128)
 const timestamp = z.string().datetime({ offset: true })
 const positionsSchema = z.array(z.tuple([z.number().finite().min(-3.4028234e38).max(3.4028234e38), z.number().finite().min(-3.4028234e38).max(3.4028234e38), z.number().finite().min(-3.4028234e38).max(3.4028234e38)])).min(1).max(5000)
 const cloudPayloadSchema = z.object({ sourceStep: count, pointCount: count.min(1).max(5000), positions: positionsSchema, positionsPath: z.string().max(512), decodeSeconds: z.number().finite().nonnegative().nullish() }).refine((cloud) => cloud.pointCount === cloud.positions.length)
+const boundsSchema = z.object({ minimum: positionsSchema.element, maximum: positionsSchema.element }).refine((bounds) => bounds.minimum.every((value, axis) => value <= bounds.maximum[axis]))
+const streamedCloudSchema = z.object({ sourceStep: count, pointCount: count.min(1).max(5000), positionsPath: z.string().max(512), streamed: z.literal(true), batchSize: z.literal(50), bounds: boundsSchema, decodeSeconds: z.number().finite().nonnegative().nullish() })
 export const previewResponseSchema = z.object({ taskId, previewVersion: count.min(1), sourceStep: count, pointCount: count.min(1).max(5000), positions: positionsSchema }).refine((cloud) => cloud.pointCount === cloud.positions.length)
 const base = {
   protocolVersion: z.literal(1), taskId, sequence: count, stage: stageSchema,
@@ -22,7 +24,7 @@ const eventSchemas = [
   z.object({ ...base, type: z.literal('task_started'), payload: plainPayload }),
   z.object({ ...base, type: z.literal('sampling_step'), payload: plainPayload }),
   z.object({ ...base, type: z.literal('preview_started'), payload: plainPayload }),
-  z.object({ ...base, type: z.literal('preview_ready'), payload: cloudPayloadSchema }),
+  z.object({ ...base, type: z.literal('preview_ready'), payload: z.union([streamedCloudSchema, cloudPayloadSchema]) }),
   z.object({ ...base, type: z.literal('preview_failed'), payload: z.object({ fatal: z.boolean(), code: z.string().optional(), message: z.string().optional() }) }),
   z.object({ ...base, type: z.literal('finalizing'), payload: plainPayload }),
   z.object({ ...base, type: z.literal('result_saving'), payload: plainPayload }),
@@ -31,6 +33,9 @@ const eventSchemas = [
   z.object({ protocolVersion: z.literal(1), type: z.literal('pong'), requestId: z.string().min(1).max(128) }),
   z.object({ protocolVersion: z.literal(1), type: z.literal('error'), code: z.string().max(128), message: z.string().max(1000), taskId: taskId.optional() }),
   z.object({ protocolVersion: z.literal(1), type: z.literal('connection_status'), taskId, payload: z.object({ connectionState: connectionSchema }) }),
+  z.object({ protocolVersion: z.literal(1), type: z.literal('point_batch'), taskId, baseSequence: count, previewVersion: count.min(1), payload: z.object({
+    sourceStep: count, totalPointCount: count.min(1).max(5000), offset: count, pointCount: count.min(1).max(50), positions: positionsSchema.max(50),
+  }).refine((batch) => batch.positions.length === batch.pointCount && batch.offset + batch.pointCount <= batch.totalPointCount) }),
 ] as const
 const messageSchema = z.discriminatedUnion('type', eventSchemas)
 export type GenerationMessage = z.infer<typeof messageSchema>
@@ -39,7 +44,7 @@ export type PreviewMetadata = z.infer<typeof metadataSchema>
 export type PreviewResponse = z.infer<typeof previewResponseSchema>
 export type GenerationStage = z.infer<typeof stageSchema>
 export type InferenceConnection = z.infer<typeof connectionSchema>
-export type PointCloud = { taskId: string; version: number; sourceStep: number; positions: Float32Array; pointCount: number }
+export type PointCloud = { taskId: string; version: number; sourceStep: number; positions: Float32Array; pointCount: number; totalPointCount: number; batchSize?: number }
 export type CoordinateFrame = { center: [number, number, number]; scale: number }
 export class RealtimeProtocolError extends Error {
   readonly closeCode: number
@@ -101,8 +106,12 @@ export const createEventSequence = () => {
 }
 export const toPointCloud = (preview: PreviewResponse): PointCloud => ({
   taskId: preview.taskId, version: preview.previewVersion, sourceStep: preview.sourceStep,
-  pointCount: preview.pointCount, positions: new Float32Array(preview.positions.flat()),
+  pointCount: preview.pointCount, totalPointCount: preview.pointCount, positions: new Float32Array(preview.positions.flat()),
 })
+export const coordinateFrameFromBounds = ({ minimum, maximum }: z.infer<typeof boundsSchema>): CoordinateFrame => {
+  const extent = Math.max(...maximum.map((value, axis) => value - minimum[axis]))
+  return { center: minimum.map((value, axis) => -(value + maximum[axis]) / 2) as CoordinateFrame['center'], scale: extent > 0 && Number.isFinite(extent) ? 3.4 / extent : 1 }
+}
 export const createCoordinateFrame = (cloud: PointCloud): CoordinateFrame => {
   const minimum = [Infinity, Infinity, Infinity]
   const maximum = [-Infinity, -Infinity, -Infinity]
@@ -112,6 +121,5 @@ export const createCoordinateFrame = (cloud: PointCloud): CoordinateFrame => {
     minimum[axis] = Math.min(minimum[axis], cloud.positions[index])
     maximum[axis] = Math.max(maximum[axis], cloud.positions[index])
   }
-  const extent = Math.max(...maximum.map((value, axis) => value - minimum[axis]))
-  return { center: minimum.map((value, axis) => -(value + maximum[axis]) / 2) as CoordinateFrame['center'], scale: extent > 0 && Number.isFinite(extent) ? 3.4 / extent : 1 }
+  return coordinateFrameFromBounds({ minimum: minimum as [number, number, number], maximum: maximum as [number, number, number] })
 }

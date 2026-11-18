@@ -78,7 +78,7 @@ export const createGenerationSocket = ({ taskId, onConnection, onSubscribe, onEv
     clearTimeout(subscribeTimer)
     onSubscribe()
     onConnection('subscribing', null)
-    if (!send({ type: 'subscribe', taskId })) { scheduleReconnect('任务订阅失败，正在恢复'); return }
+    if (!send({ type: 'subscribe', taskId, pointBatches: true })) { scheduleReconnect('任务订阅失败，正在恢复'); return }
     subscribeTimer = setTimeout(() => scheduleReconnect('未收到任务快照，正在恢复连接'), 10_000)
   }
   const resubscribe = () => {

@@ -8,12 +8,13 @@ import type { PointCloud } from '../lib/realtime/generation-events'
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import type { centerModel } from '../lib/model-resources'
 
-type Props = { cloud?: PointCloud; onPreviewApplied?: (version: number) => void; model?: GLTF; normalization?: ReturnType<typeof centerModel>; grid: boolean; reset: number; onFailure: () => void }
-const SceneControls = ({ reset, onFailure }: Pick<Props, 'reset' | 'onFailure'>) => {
+type Props = { cloud?: PointCloud; printing?: boolean; onPrintProgress?: (count: number) => void; onPreviewApplied?: (version: number) => void; model?: GLTF; normalization?: ReturnType<typeof centerModel>; grid: boolean; reset: number; onFailure: () => void }
+const SceneControls = ({ reset, onFailure, printerVisible }: Pick<Props, 'reset' | 'onFailure'> & { printerVisible: boolean }) => {
   const { camera, gl, invalidate } = useThree()
   useEffect(() => {
     if (!(camera instanceof PerspectiveCamera)) return
-    camera.position.set(5, 3, 6.5)
+    const [x, y, z] = printerVisible ? [7.6, 4.7, 9.6] : [5, 3, 6.5]
+    camera.position.set(x, y, z)
     const controls = new OrbitControls(camera, gl.domElement)
     controls.target.set(0, 0.1, 0)
     controls.minDistance = 2.5
@@ -25,7 +26,7 @@ const SceneControls = ({ reset, onFailure }: Pick<Props, 'reset' | 'onFailure'>)
     const lost = (event: Event) => { event.preventDefault(); onFailure() }
     gl.domElement.addEventListener('webglcontextlost', lost)
     return () => { controls.dispose(); gl.domElement.removeEventListener('webglcontextlost', lost) }
-  }, [camera, gl, invalidate, reset, onFailure])
+  }, [camera, gl, invalidate, reset, onFailure, printerVisible])
   return null
 }
 const WaitingCloud = ({ reducedMotion }: { reducedMotion: boolean }) => {
@@ -59,15 +60,15 @@ const LoadedModel = ({ model, normalization, reducedMotion }: Required<Pick<Prop
   useFrame((_, delta) => { if (!reducedMotion) mixer.update(Math.min(delta, 0.05)) })
   return <group scale={normalization.scale} dispose={null}><group position={normalization.center}><primitive object={model.scene} dispose={null}/></group></group>
 }
-export const ViewportScene = ({ model, normalization, cloud, onPreviewApplied, grid, reset, onFailure }: Props) => {
+export const ViewportScene = ({ model, normalization, cloud, printing = false, onPrintProgress, onPreviewApplied, grid, reset, onFailure }: Props) => {
   const visible = usePageVisible()
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   return <Canvas camera={{ position: [5, 3, 6.5], fov: 40, near: 0.05, far: 100 }} dpr={[1, 1.5]} frameloop={!visible ? 'never' : reducedMotion ? 'demand' : 'always'} gl={{ antialias: true, alpha: true, powerPreference: 'low-power' }} fallback={null}>
     <ambientLight intensity={1.6}/><hemisphereLight args={['#f4f6e6', '#35393c', 2]}/><directionalLight position={[3, 5, 4]} intensity={3}/><directionalLight position={[-4, 2, -2]} intensity={1.5} color="#dce8ff"/>
     {model && normalization && <LoadedModel model={model} normalization={normalization} reducedMotion={reducedMotion}/>}
-    {cloud && normalization && onPreviewApplied && <group scale={normalization.scale}><group position={normalization.center}><PointCloudPreview cloud={cloud} visible={!model} reducedMotion={reducedMotion} onApplied={onPreviewApplied}/></group></group>}
+    {cloud && normalization && onPreviewApplied && <PointCloudPreview cloud={cloud} visible={!model} printing={printing} normalization={normalization} reducedMotion={reducedMotion} onApplied={onPreviewApplied} onProgress={onPrintProgress}/>}
     {!model && !cloud && <WaitingCloud reducedMotion={reducedMotion}/>}
     {grid && <gridHelper args={[30, 60, '#575b55', '#454943']} material-transparent material-opacity={0.35} position={[0, -1.78, 0]}/>}
-    <SceneControls reset={reset} onFailure={onFailure}/>
+    <SceneControls reset={reset} onFailure={onFailure} printerVisible={Boolean(cloud && printing && !model && !reducedMotion)}/>
   </Canvas>
 }
