@@ -78,7 +78,6 @@ export const createGenerationRealtime = (taskId: string | null, userId: string, 
     if (key === terminalKey) return
     terminalKey = key
     // 只协调已有业务任务；断线和重复事件均不会 POST 新任务。
-    void queryClient.invalidateQueries({ queryKey: ['generation', userId, 'task', taskId], exact: true })
     void queryClient.invalidateQueries({ queryKey: ['generation', userId, 'tasks'] })
   }
   const receive = (event: GenerationEvent) => {
@@ -121,7 +120,7 @@ export const createGenerationRealtime = (taskId: string | null, userId: string, 
     const current = ++epoch
     client?.dispose()
     if (!env.generationWebsocketEnabled) {
-      publish({ connection: 'closed', connectionMessage: '实时通知尚未部署，使用任务查询更新进度' })
+      publish({ connection: 'closed', connectionMessage: 'WebSocket 未启用，无法接收实时进度' })
       return
     }
     client = createGenerationSocket({
@@ -137,22 +136,6 @@ export const createGenerationRealtime = (taskId: string | null, userId: string, 
     client.start()
   }
   return {
-    observeTask: (task: GenerationTask | undefined) => {
-      if (!task || task.id !== taskId || settled || !active) return
-      if (state.task && !isTaskRunning(state.task.status) && isTaskRunning(task.status)) return
-      if (state.connection === 'connected' && isTaskRunning(task.status)) return
-      const completedSteps = task.completedSteps ?? state.completedSteps
-      const stageOrder = { queued: 0, preprocessing: 1, sampling: 2, preview_decoding: 2, final_decoding: 3, result_saving: 4, completed: 5, failed: 5 }
-      const olderStage = task.stage && state.stage && stageOrder[task.stage] < stageOrder[state.stage] && (completedSteps ?? 0) <= (state.completedSteps ?? 0)
-      const regressed = Boolean(olderStage) || (completedSteps !== null && state.completedSteps !== null && completedSteps < state.completedSteps)
-      if (!regressed) publish({
-        stage: task.stage ?? state.stage,
-        completedSteps, totalSteps: task.totalSteps ?? state.totalSteps,
-        inferenceConnection: task.connectionState ?? state.inferenceConnection,
-        task: { status: task.status, assetId: task.assetId, simulated: task.simulated, errorCode: task.errorCode, errorMessage: task.errorMessage },
-      })
-      if (task.latestPreview) notifyPreview(task.latestPreview)
-    },
     getSnapshot: () => state,
     subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } },
     start,

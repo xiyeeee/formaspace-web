@@ -7,12 +7,12 @@ const count = z.number().int().nonnegative().safe()
 const taskId = z.string().min(1).max(128)
 const timestamp = z.string().datetime({ offset: true })
 const positionsSchema = z.array(z.tuple([z.number().finite().min(-3.4028234e38).max(3.4028234e38), z.number().finite().min(-3.4028234e38).max(3.4028234e38), z.number().finite().min(-3.4028234e38).max(3.4028234e38)])).min(1).max(5000)
-const cloudPayloadSchema = z.object({ sourceStep: count, pointCount: count.min(1).max(5000), positions: positionsSchema, positionsPath: z.string().max(512), decodeSeconds: z.number().finite().nonnegative().optional() }).refine((cloud) => cloud.pointCount === cloud.positions.length)
+const cloudPayloadSchema = z.object({ sourceStep: count, pointCount: count.min(1).max(5000), positions: positionsSchema, positionsPath: z.string().max(512), decodeSeconds: z.number().finite().nonnegative().nullish() }).refine((cloud) => cloud.pointCount === cloud.positions.length)
 export const previewResponseSchema = z.object({ taskId, previewVersion: count.min(1), sourceStep: count, pointCount: count.min(1).max(5000), positions: positionsSchema }).refine((cloud) => cloud.pointCount === cloud.positions.length)
 const base = {
   protocolVersion: z.literal(1), taskId, sequence: count, stage: stageSchema,
   completedSteps: count.nullish().transform((value) => value ?? null),
-  totalSteps: count.min(1).nullish().transform((value) => value ?? null),
+  totalSteps: count.nullish().transform((value) => value ?? null),
   previewVersion: count, timestamp,
 }
 const plainPayload = z.object({}).passthrough()
@@ -55,14 +55,14 @@ export const assertPreviewPath = (path: string, id: string, version: number) => 
 }
 export const parseGenerationMessage = (raw: unknown): GenerationMessage => {
   if (typeof raw !== 'string') throw new RealtimeProtocolError('实时服务返回了不支持的消息格式')
-  if (raw.length > MAX_REALTIME_BYTES || new TextEncoder().encode(raw).byteLength > MAX_REALTIME_BYTES) throw new RealtimeProtocolError('实时消息超过大小限制，已切换任务查询', 1009)
+  if (raw.length > MAX_REALTIME_BYTES || new TextEncoder().encode(raw).byteLength > MAX_REALTIME_BYTES) throw new RealtimeProtocolError('实时消息超过大小限制，请重试实时连接', 1009)
   let payload: unknown
   try { payload = JSON.parse(raw) } catch { throw new RealtimeProtocolError('实时服务返回了无效 JSON') }
   const parsed = messageSchema.safeParse(payload)
   if (!parsed.success) throw new RealtimeProtocolError('实时消息协议或点云数据无效，请检查服务版本')
   const message = parsed.data
   if (!('sequence' in message)) return message
-  if (message.completedSteps !== null && message.totalSteps !== null && message.completedSteps > message.totalSteps) throw new RealtimeProtocolError('实时采样步数超出总步数')
+  if (message.completedSteps !== null && message.totalSteps !== null && message.totalSteps > 0 && message.completedSteps > message.totalSteps) throw new RealtimeProtocolError('实时采样步数超出总步数')
   if (eventStages[message.type] && eventStages[message.type] !== message.stage) throw new RealtimeProtocolError('实时事件与生成阶段不一致')
   if (message.type === 'preview_ready') {
     if (message.previewVersion < 1 || (message.completedSteps !== null && message.payload.sourceStep > message.completedSteps)) throw new RealtimeProtocolError('中间点云版本或采样步数无效')

@@ -7,6 +7,6 @@ export const useGenerationRealtime = (taskId: string | null) => {
   const store = useMemo(() => createGenerationRealtime(taskId, user!.id, revision), [taskId, user, revision])
   useEffect(() => { store.start(); return store.dispose }, [store])
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot)
-  return { ...state, retry: store.retry, retryPreview: store.retryPreview, confirmPreview: store.confirmPreview, finish: store.finish, observeTask: store.observeTask }
+  return { ...state, retry: store.retry, retryPreview: store.retryPreview, confirmPreview: store.confirmPreview, finish: store.finish }
 }
 export type GenerationRealtime = ReturnType<typeof useGenerationRealtime>

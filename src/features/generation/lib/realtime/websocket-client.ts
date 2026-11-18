@@ -58,7 +58,7 @@ export const createGenerationSocket = ({ taskId, onConnection, onSubscribe, onEv
   const scheduleReconnect = (message: string) => {
     detach()
     if (!active || stopped || !isCurrent()) return
-    if (attempts >= 8) { stop('实时连接多次失败，已保留任务查询；可手动重试'); return }
+    if (attempts >= 8) { stop('实时连接多次失败，请重试实时连接；可手动重试'); return }
     onConnection('reconnecting', message)
     if (document.hidden) return
     const delay = Math.min(1000 * 2 ** Math.min(attempts++, 5), 30_000) * (0.8 + Math.random() * 0.2)
@@ -88,7 +88,7 @@ export const createGenerationSocket = ({ taskId, onConnection, onSubscribe, onEv
       const now = Date.now()
       gapRecoveries = gapRecoveries.filter((time) => now - time < 30_000)
       gapRecoveries.push(now)
-      if (gapRecoveries.length > 6) { stop('实时消息持续缺失，已切换任务查询，请稍后重试'); return }
+      if (gapRecoveries.length > 6) { stop('实时消息持续缺失，请重试实时连接，请稍后重试'); return }
       if (gapRecoveries.length > 3) { scheduleReconnect('实时消息缺号，正在重新连接'); return }
       send({ type: 'unsubscribe', taskId })
       subscribe()
@@ -106,7 +106,7 @@ export const createGenerationSocket = ({ taskId, onConnection, onSubscribe, onEv
     }
     if (message.type === 'error') {
       if (message.code === 'UNAUTHORIZED') { scheduleReconnect('正在重新验证实时连接'); return }
-      stop(message.code === 'NOT_FOUND' || message.code === 'TASK_NOT_FOUND' || message.code === 'FORBIDDEN' ? '当前任务不可订阅，已保留任务查询' : '实时订阅被服务拒绝，已保留任务查询')
+      stop(message.code === 'NOT_FOUND' || message.code === 'TASK_NOT_FOUND' || message.code === 'FORBIDDEN' ? '当前任务不可订阅，请重试实时连接' : '实时订阅被服务拒绝，请重试实时连接')
       return
     }
     const result = onEvent(message)
@@ -138,24 +138,24 @@ export const createGenerationSocket = ({ taskId, onConnection, onSubscribe, onEv
         if (!valid()) return
         try { handleMessage(parseGenerationMessage(event.data)) }
         catch (error) {
-          stop(error instanceof RealtimeProtocolError ? error.message : '实时消息处理失败，已保留任务查询', error instanceof RealtimeProtocolError ? error.closeCode : 1002)
+          stop(error instanceof RealtimeProtocolError ? error.message : '实时消息处理失败，请重试实时连接', error instanceof RealtimeProtocolError ? error.closeCode : 1002)
         }
       }
       connection.onerror = () => { /* 等待 close 获取关闭码，不能把网络错误当作 JWT 失效。 */ }
       connection.onclose = (event) => {
         if (!valid()) return
         if (event.code === 1008) { stop('实时连接被策略拒绝，请重新检查账号或服务配置'); return }
-        if (event.code === 1009) { stop('实时消息超过大小限制，已切换任务查询'); return }
+        if (event.code === 1009) { stop('实时消息超过大小限制，请重试实时连接'); return }
         scheduleReconnect(event.code === 4001 ? '正在重新验证实时连接' : event.code === 1013 ? '实时服务繁忙，正在等待重连' : '实时连接已断开，正在恢复')
       }
     } catch (error) {
       if (!active || current !== generation || controller.signal.aborted) return
       if (error instanceof ApiError && [401, 403, 404].includes(error.status)) {
-        stop(error.status === 404 ? '实时接口尚未部署，正在定时查询任务状态' : error.status === 401 ? '实时票据验证失败，请重新登录' : '当前账号无法建立实时连接')
+        stop(error.status === 404 ? '实时接口尚未部署，无法接收实时进度' : error.status === 401 ? '实时票据验证失败，请重新登录' : '当前账号无法建立实时连接')
         return
       }
-      if (error instanceof ApiError && error.code === 'INVALID_RESPONSE') { stop('实时票据接口与当前协议不一致，已保留任务查询'); return }
-      scheduleReconnect('实时连接暂不可用，正在定时查询任务状态')
+      if (error instanceof ApiError && error.code === 'INVALID_RESPONSE') { stop('实时票据接口与当前协议不一致，请重试实时连接'); return }
+      scheduleReconnect('实时连接暂不可用，正在重新连接')
     }
   }
   const visibilityChanged = () => {

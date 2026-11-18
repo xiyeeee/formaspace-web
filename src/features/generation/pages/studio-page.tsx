@@ -33,8 +33,7 @@ const StudioWorkspace = ({ userId }: { userId: string }) => {
   const capabilities = useQuery({ queryKey: ['generation', userId, 'capabilities'], queryFn: ({ signal }) => getCapabilities(signal), select: adaptCapabilities, retry: false, staleTime: 15_000, refetchOnWindowFocus: true })
   const history = useTaskHistory(page, status)
   const realtime = useGenerationRealtime(taskId)
-  const terminalRealtime = Boolean(realtime.task && !isTaskRunning(realtime.task.status))
-  const taskQuery = useTaskQuery(taskId, realtime.connection === 'connected' || terminalRealtime)
+  const taskQuery = useTaskQuery(taskId)
   const task = useMemo(() => reconcileRealtimeTask(taskQuery.data, realtime.task), [taskQuery.data, realtime.task])
   const assetQuery = useTaskAsset(task ?? realtime.task ?? undefined)
   const selectTask = (selected: GenerationTask) => {
@@ -50,10 +49,8 @@ const StudioWorkspace = ({ userId }: { userId: string }) => {
   useEffect(() => {
     if (task && !isTaskRunning(task.status)) void queryClient.invalidateQueries({ queryKey: ['generation', userId, 'tasks'] })
   }, [task, userId])
-  const observeRealtimeTask = realtime.observeTask
   const finishRealtime = realtime.finish
   const terminalTask = task ?? realtime.task
-  useEffect(() => { observeRealtimeTask(taskQuery.data) }, [observeRealtimeTask, taskQuery.data])
   useEffect(() => {
     if (terminalTask && !isTaskRunning(terminalTask.status) && (terminalTask.status === 'FAILED' || terminalTask.assetId)) finishRealtime()
   }, [terminalTask, finishRealtime])
