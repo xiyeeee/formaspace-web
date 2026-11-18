@@ -9,11 +9,11 @@ import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import type { centerModel } from '../lib/model-resources'
 
 type Props = { cloud?: PointCloud; printing?: boolean; onPrintProgress?: (count: number) => void; onPreviewApplied?: (version: number) => void; model?: GLTF; normalization?: ReturnType<typeof centerModel>; grid: boolean; reset: number; onFailure: () => void }
-const SceneControls = ({ reset, onFailure, printerVisible }: Pick<Props, 'reset' | 'onFailure'> & { printerVisible: boolean }) => {
+const SceneControls = ({ reset, onFailure }: Pick<Props, 'reset' | 'onFailure'>) => {
   const { camera, gl, invalidate } = useThree()
   useEffect(() => {
     if (!(camera instanceof PerspectiveCamera)) return
-    const [x, y, z] = printerVisible ? [7.6, 4.7, 9.6] : [5, 3, 6.5]
+    const [x, y, z] = [5, 3, 6.5]
     camera.position.set(x, y, z)
     const controls = new OrbitControls(camera, gl.domElement)
     controls.target.set(0, 0.1, 0)
@@ -26,7 +26,7 @@ const SceneControls = ({ reset, onFailure, printerVisible }: Pick<Props, 'reset'
     const lost = (event: Event) => { event.preventDefault(); onFailure() }
     gl.domElement.addEventListener('webglcontextlost', lost)
     return () => { controls.dispose(); gl.domElement.removeEventListener('webglcontextlost', lost) }
-  }, [camera, gl, invalidate, reset, onFailure, printerVisible])
+  }, [camera, gl, invalidate, reset, onFailure])
   return null
 }
 const WaitingCloud = ({ reducedMotion }: { reducedMotion: boolean }) => {
@@ -69,6 +69,6 @@ export const ViewportScene = ({ model, normalization, cloud, printing = false, o
     {cloud && normalization && onPreviewApplied && <PointCloudPreview cloud={cloud} visible={!model} printing={printing} normalization={normalization} reducedMotion={reducedMotion} onApplied={onPreviewApplied} onProgress={onPrintProgress}/>}
     {!model && !cloud && <WaitingCloud reducedMotion={reducedMotion}/>}
     {grid && <gridHelper args={[30, 60, '#575b55', '#454943']} material-transparent material-opacity={0.35} position={[0, -1.78, 0]}/>}
-    <SceneControls reset={reset} onFailure={onFailure} printerVisible={Boolean(cloud && printing && !model && !reducedMotion)}/>
+    <SceneControls reset={reset} onFailure={onFailure}/>
   </Canvas>
 }

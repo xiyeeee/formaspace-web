@@ -1698,3 +1698,21 @@
 .point-print-status { position: absolute; z-index: 4; left: 24px; bottom: 104px; display: grid; gap: 6px; padding: 11px 15px; border: 1px solid #b9e45a33; border-radius: 8px; background: #17211ce8; color: #d7ef9b; font-size: 12px; pointer-events: none; }
 .point-print-status span { color: #96a18e; font-size: 10px; }
 .model-viewport.has-real-cloud .viewport-message { top: 16%; bottom: auto; transform: translate(-50%, 0); }
+
+.point-print-stage { display: flex; align-items: center; gap: 8px; }
+.point-print-stage strong { font-weight: 500; }
+
+.model-viewport .viewport-message.viewport-sampling-status {
+  top: auto;
+  right: auto;
+  bottom: 104px;
+  left: 24px;
+  width: min(280px, calc(100% - 48px));
+  padding: 0;
+  transform: none;
+  text-align: left;
+}
+.viewport-sampling-status .sampling-progress { width: 100%; margin: 0; }
+.viewport-sampling-status .task-progress { width: 100%; margin: 0; }
+
+.point-print-status { width: min(280px, calc(100% - 48px)); gap: 12px; }
