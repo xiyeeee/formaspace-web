@@ -48,6 +48,10 @@ export const createGenerationRealtime = (taskId: string | null, userId: string, 
   const previewClosed = () => settled && state.task?.status !== 'FAILED' && (!latestPreview || hasCompleteCloud(latestPreview.version))
   const acceptCloud = (cloud: PointCloud) => {
     if (!active || previewClosed() || cloud.taskId !== taskId || cloud.version < (state.cloud?.version ?? 0) || (cloud.version === state.cloud?.version && cloud.pointCount <= state.cloud.pointCount)) return
+    if (state.cloud && cloud.version > state.cloud.version && cloud.sourceStep <= state.cloud.sourceStep) {
+      publish({ previewMessage: '新的中间预览采样步数无效，保留当前预览。' })
+      return
+    }
     publish({ cloud, coordinateFrame: state.coordinateFrame ?? createCoordinateFrame(cloud), previewMessage: null })
   }
   const downloadPreview = async (preview: PreviewMetadata, force = false) => {
@@ -96,7 +100,7 @@ export const createGenerationRealtime = (taskId: string | null, userId: string, 
     if (decision !== 'accept') return decision === 'resubscribe' ? 'resubscribe' as const : undefined
     const previous = state.task
     if (previous && !isTaskRunning(previous.status)) {
-      if (event.type !== 'task_snapshot' || event.payload.status !== previous.status) return
+      if (event.type !== 'preview_ready' && (event.type !== 'task_snapshot' || event.payload.status !== previous.status)) return
     }
     const patch: Partial<RealtimeState> = { stage: event.stage, completedSteps: event.completedSteps, totalSteps: event.totalSteps }
     let task: RealtimeTask
@@ -108,6 +112,9 @@ export const createGenerationRealtime = (taskId: string | null, userId: string, 
       task = { ...previous, status: 'SUCCEEDED', assetId: event.payload.assetId, errorCode: null, errorMessage: null }
     } else if (event.type === 'task_failed') {
       task = { ...previous, status: 'FAILED', assetId: null, errorCode: event.payload.code, errorMessage: event.payload.message }
+    } else if (previous && !isTaskRunning(previous.status)) {
+      task = previous
+      patch.stage = state.stage
     } else {
       task = { ...previous, status: event.type === 'task_queued' ? 'PENDING' : event.type === 'task_started' ? 'SUBMITTING' : 'PROCESSING', assetId: null, errorCode: null, errorMessage: null }
     }
